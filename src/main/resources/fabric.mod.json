@@ -1,0 +1,34 @@
+{
+	"schemaVersion": 1,
+	"id": "mewsmtr",
+	"version": "${version}",
+	"name": "Mewzica's MTR Addon",
+	"description": "An addon for Minecraft Transit Railway. Adds a signal dispatch dashboard for editing signal connections between rail nodes, plus manual-driving quality-of-life features such as a departure countdown and a three-position reverser.",
+	"authors": [
+		"Mewzica"
+	],
+	"contact": {
+		"homepage": "https://github.com/Mewzica/Mewzica-s-MTR-Addon",
+		"sources": "https://github.com/Mewzica/Mewzica-s-MTR-Addon"
+	},
+	"license": "MIT",
+	"icon": "assets/mewsmtr/icon.png",
+	"environment": "*",
+	"entrypoints": {
+		"main": [
+			"org.mtr.signaldashboard.MTRSignalDashboardFabric"
+		],
+		"client": [
+			"org.mtr.signaldashboard.MTRSignalDashboardFabricClient"
+		]
+	},
+	"mixins": [
+		"mewsmtr.mixins.json"
+	],
+	"depends": {
+		"fabricloader": ">=0.15.0",
+		"fabric": "*",
+		"minecraft": "${minecraft}",
+		"mtr": ">=4.0.0"
+	}
+}

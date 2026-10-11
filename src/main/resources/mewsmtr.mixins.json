@@ -1,0 +1,16 @@
+{
+	"required": true,
+	"minVersion": "0.8",
+	"package": "org.mtr.signaldashboard.mixin",
+	"compatibilityLevel": "JAVA_17",
+	"mixins": [
+		"VehicleSchemaAccessor",
+		"VehicleMixin"
+	],
+	"client": [
+		"DrivingGuiRendererMixin"
+	],
+	"injectors": {
+		"defaultRequire": 1
+	}
+}

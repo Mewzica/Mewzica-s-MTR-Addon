@@ -1,0 +1,17 @@
+# Normalise line endings on commit so the repo stays consistent across platforms.
+* text=auto
+
+*.java text eol=lf
+*.gradle text eol=lf
+*.json text eol=lf
+*.md text eol=lf
+*.properties text eol=lf
+*.html text eol=lf
+*.js text eol=lf
+gradlew text eol=lf
+
+*.bat text eol=crlf
+
+*.jar binary
+*.png binary
+*.class binary

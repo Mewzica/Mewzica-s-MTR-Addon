@@ -1,0 +1,1197 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>MTR 信号调度板 · 界面原型</title>
+<style>
+  :root{
+    --bg:#0d0d0f; --panel:#17181b; --panel2:#1e2024; --line:#2b2e33;
+    --fg:#e6e8eb; --fg2:#9aa0a6; --accent:#4c9aff; --accent2:#2e7d32;
+  }
+  *{box-sizing:border-box}
+  html,body{height:100%}
+  body{
+    margin:0; background:var(--bg); color:var(--fg);
+    font:13px/1.5 "Microsoft YaHei","PingFang SC","Noto Sans SC",system-ui,sans-serif;
+    display:flex; flex-direction:column; overflow:hidden;
+  }
+  header{
+    flex:0 0 auto; padding:10px 16px; border-bottom:1px solid var(--line);
+    display:flex; align-items:baseline; gap:12px; background:var(--panel);
+  }
+  header h1{font-size:15px; margin:0; font-weight:600}
+  header .sub{font-size:12px; color:var(--fg2)}
+  header .spacer{flex:1}
+  header button{
+    background:var(--panel2); color:var(--fg); border:1px solid var(--line);
+    border-radius:5px; padding:5px 12px; font-size:12px; cursor:pointer;
+  }
+  header button:hover{border-color:var(--accent); color:#fff}
+  header button.primary{background:var(--accent); border-color:var(--accent); color:#fff}
+
+  main{flex:1; display:flex; min-height:0}
+
+  /* ---- 左：预览台 ---- */
+  .stage{flex:1; display:flex; flex-direction:column; min-width:0; min-height:0}
+  .stage-bar{
+    flex:0 0 auto; padding:6px 12px; font-size:12px; color:var(--fg2);
+    border-bottom:1px solid var(--line); display:flex; gap:16px; align-items:center; flex-wrap:wrap;
+  }
+  .stage-bar b{color:var(--fg); font-weight:600}
+  .stage-view{
+    flex:1; overflow:auto; display:flex; align-items:center; justify-content:center;
+    padding:20px; background:
+      linear-gradient(45deg,#131417 25%,transparent 25%,transparent 75%,#131417 75%),
+      linear-gradient(45deg,#131417 25%,#0f1013 25%,#0f1013 75%,#131417 75%);
+    background-size:20px 20px; background-position:0 0,10px 10px;
+  }
+  canvas#mc{
+    display:block; box-shadow:0 8px 40px rgba(0,0,0,.6); border-radius:3px;
+    cursor:default;
+  }
+  canvas#mc.pixelated{image-rendering:pixelated}
+
+  /* ---- 右：设计面板 ---- */
+  .designer{
+    flex:0 0 320px; width:320px; border-left:1px solid var(--line);
+    background:var(--panel); overflow-y:auto; padding:0 0 40px;
+  }
+  .designer::-webkit-scrollbar{width:10px}
+  .designer::-webkit-scrollbar-thumb{background:#333; border-radius:5px}
+  .group{border-bottom:1px solid var(--line)}
+  .group>h3{
+    margin:0; padding:9px 14px; font-size:12px; font-weight:600; letter-spacing:.4px;
+    color:var(--fg); cursor:pointer; user-select:none; background:var(--panel2);
+    display:flex; align-items:center; gap:8px;
+  }
+  .group>h3::before{content:"▾"; font-size:10px; color:var(--fg2); transition:transform .15s}
+  .group.collapsed>h3::before{transform:rotate(-90deg)}
+  .group.collapsed>.group-body{display:none}
+  .group-body{padding:8px 14px 12px}
+
+  .ctrl{display:grid; grid-template-columns:1fr auto; align-items:center; gap:4px 8px; padding:4px 0}
+  .ctrl>.ctrl-name{font-size:12px; color:var(--fg2)}
+  .ctrl>.ctrl-val{font-size:11px; color:var(--fg); font-variant-numeric:tabular-nums; min-width:42px; text-align:right}
+  .ctrl input[type=range]{grid-column:1/3; width:100%; height:16px; accent-color:var(--accent); margin:0}
+  .ctrl input[type=color]{
+    width:38px; height:20px; padding:0; border:1px solid var(--line);
+    border-radius:3px; background:none; cursor:pointer;
+  }
+  .ctrl input[type=checkbox]{accent-color:var(--accent); cursor:pointer; margin:0}
+  .ctrl.disabled{opacity:.35; pointer-events:none}
+
+  .hint{font-size:11px; color:var(--fg2); padding:2px 0 6px; line-height:1.5}
+
+  /* ---- 导出弹层 ---- */
+  .modal{
+    position:fixed; inset:0; background:rgba(0,0,0,.65); display:none;
+    align-items:center; justify-content:center; padding:32px; z-index:50;
+  }
+  .modal.show{display:flex}
+  .modal-box{
+    background:var(--panel); border:1px solid var(--line); border-radius:8px;
+    width:min(760px,100%); max-height:100%; display:flex; flex-direction:column; overflow:hidden;
+  }
+  .modal-box header{border-bottom:1px solid var(--line); background:none}
+  .modal-box textarea{
+    flex:1; min-height:320px; margin:0; padding:14px 16px; border:0; resize:vertical;
+    background:#0b0c0e; color:#cfe3ff; font:12px/1.6 Consolas,"Courier New",monospace;
+    outline:none; white-space:pre; overflow:auto;
+  }
+  .modal-box footer{padding:10px 16px; border-top:1px solid var(--line); display:flex; gap:8px; justify-content:flex-end}
+  .modal-box footer button{
+    background:var(--panel2); color:var(--fg); border:1px solid var(--line);
+    border-radius:5px; padding:6px 14px; font-size:12px; cursor:pointer;
+  }
+  .modal-box footer button.primary{background:var(--accent); border-color:var(--accent); color:#fff}
+</style>
+</head>
+<body>
+
+<header>
+  <h1>MTR 信号调度板 · 界面原型</h1>
+  <span class="sub">右侧调参 → 实时预览 → 导出参数给我，我落回 Java 代码</span>
+  <span class="spacer"></span>
+  <button id="btnReset">恢复默认</button>
+  <button id="btnExport" class="primary">导出参数</button>
+</header>
+
+<main>
+  <section class="stage">
+    <div class="stage-bar">
+      <span>模拟窗口 <b id="infoSize">540 × 300</b> GUI 单位</span>
+      <span>实际窗口 <b id="infoReal">540 × 300</b> 单位</span>
+      <span>画布占比 <b id="infoCanvas">—</b></span>
+      <span>缩放 <b id="infoScale">—</b></span>
+      <span class="spacer" style="flex:1"></span>
+      <span>交互：左键选节点 / 右键取消 / 中键拖动 / 滚轮缩放 / 点左侧列表选中轨道</span>
+    </div>
+    <div class="stage-view"><canvas id="mc"></canvas></div>
+  </section>
+
+  <aside class="designer" id="designer"></aside>
+</main>
+
+<div class="modal" id="modal">
+  <div class="modal-box">
+    <header><h1>导出的设计参数</h1><span class="spacer" style="flex:1"></span><span class="sub">直接发我即可</span></header>
+    <textarea id="exportText" readonly spellcheck="false"></textarea>
+    <footer>
+      <button id="btnCopy">复制到剪贴板</button>
+      <button id="btnCloseModal" class="primary">关闭</button>
+    </footer>
+  </div>
+</div>
+
+<script>
+"use strict";
+
+/* =====================================================================
+   1. 可调参数
+   —— 默认值全部对齐当前 Java 实现（IGui / SignalDashboardScreen）
+   ===================================================================== */
+
+const DEFAULTS = {
+  /* 预览 */
+  guiWidth: 900, guiHeight: 560, previewScale: 1, pixelated: false,
+
+  /* 布局（Java: clamp(w/6, 64, 150) / clamp(w/9, 58, 100)） */
+  listAuto: true,  listWidth: 90,
+  colorAuto: true, colorWidth: 60,
+
+  /* 排版 */
+  textHeight: 10, lineHeight: 14, textPadding: 5,
+
+  /* 配色 —— 面板 */
+  bgWindow: "#1a1a1a", bgPanel: "#121212", bgCanvas: "#0a0a0a",
+  textPrimary: "#ffffff", textSecondary: "#aaaaaa", textDim: "#555555",
+
+  /* 配色 —— 轨道与节点 */
+  railNormal: "#44aa44", railOccupied: "#ff0000", railSelected: "#ffd54f",
+  nodeNormal: "#aaaaaa", nodeJunction: "#ffe082", nodeHover: "#ffffff",
+  nodeA: "#ffaa00", nodeB: "#00aaff",
+
+  /* 配色 —— 列表 */
+  rowHover: "#2a2a2a", rowSelected: "#3e5a3e", rowTextSelected: "#ffd54f",
+  scrollTrack: "#2a2a2a", scrollThumb: "#888888",
+
+  /* 尺寸 */
+  railWidth: 1.5, railWidthSelected: 1.5,
+  nodeRadius: 2.5, nodeRadiusJunction: 2.5, nodeRadiusHover: 2.5, nodeRadiusSelected: 2.5,
+  swatchW: 4, swatchH: 6, swatchGap: 6, maxSwatches: 8,
+
+  /* 地形 */
+  showTerrain: true, terrainDim: 1.5, terrainAlpha: 1.0,
+
+  /* 显示开关 */
+  showNodes: true, showRailMarkers: false, showGrid: false, gridStep: 32,
+
+  /* 按钮 */
+  buttonMinH: 18, buttonMaxH: 18, buttonGap: 3,
+};
+
+let P = Object.assign({}, DEFAULTS);
+
+/* =====================================================================
+   2. 模拟数据
+   —— 结构对齐 Java 的 SignalRailData：折线路径 + 精确端点 + 信号颜色
+   ===================================================================== */
+
+/** 车场拓扑：环线 + 三条下行线 + 一条存车线，共 7 个节点、4 个岔口。 */
+const YARD_DEFS = [
+  { pts:[[30,20],[30,4],[36,-8],[44,-12],[52,-8],[58,4],[58,20]],
+    speed:80, platform:true,  occupied:false,
+    colors:["#ffffff","#00ff00","#ff0000","#0000ff","#00ffff","#ffff00"] },
+  { pts:[[30,20],[44,20]], speed:80, platform:true,  occupied:false, colors:["#ff8c00"] },
+  { pts:[[44,20],[58,20]], speed:80, platform:true,  occupied:false, colors:[] },
+  { pts:[[30,20],[30,90]], speed:60, platform:false, occupied:false, colors:[] },
+  { pts:[[44,20],[44,90]], speed:60, platform:false, occupied:true,  colors:["#ff00ff"] },
+  { pts:[[58,20],[58,90]], speed:60, platform:false, occupied:false, colors:["#ffff00"] },
+  { pts:[[30,90],[20,102],[12,110]], speed:40, platform:false, siding:true, occupied:false, colors:[] },
+];
+
+/** Catmull-Rom 平滑，把少量控制点变成一条像样的轨道曲线。 */
+function smooth(pts, sub) {
+  sub = sub || 10;
+  if (pts.length < 2) return pts.slice();
+  const p = [pts[0], ...pts, pts[pts.length - 1]];
+  const out = [];
+  for (let i = 1; i + 2 < p.length; i++) {
+    const p0 = p[i - 1], p1 = p[i], p2 = p[i + 1], p3 = p[i + 2];
+    for (let s = 0; s < sub; s++) {
+      const t = s / sub, t2 = t * t, t3 = t2 * t;
+      out.push([
+        0.5 * ((2 * p1[0]) + (-p0[0] + p2[0]) * t + (2 * p0[0] - 5 * p1[0] + 4 * p2[0] - p3[0]) * t2 + (-p0[0] + 3 * p1[0] - 3 * p2[0] + p3[0]) * t3),
+        0.5 * ((2 * p1[1]) + (-p0[1] + p2[1]) * t + (2 * p0[1] - 5 * p1[1] + 4 * p2[1] - p3[1]) * t2 + (-p0[1] + 3 * p1[1] - 3 * p2[1] + p3[1]) * t3),
+      ]);
+    }
+  }
+  out.push(pts[pts.length - 1]);
+  return out;
+}
+
+function polylineLength(path) {
+  let n = 0;
+  for (let i = 0; i + 1 < path.length; i++) n += Math.hypot(path[i + 1][0] - path[i][0], path[i + 1][1] - path[i][1]);
+  return n;
+}
+
+const RAILS = YARD_DEFS.map((d, i) => {
+  const path = smooth(d.pts);
+  return {
+    index: i,
+    path,
+    pos1: d.pts[0],
+    pos2: d.pts[d.pts.length - 1],
+    length: polylineLength(path),
+    speed: d.speed,
+    platform: !!d.platform,
+    siding: !!d.siding,
+    occupied: !!d.occupied,
+    colors: d.colors || [],
+  };
+});
+
+/** 端点去重 + 统计共用数（≥2 即岔口），与 Java 的 rebuildNodes 一致。 */
+const NODES = (() => {
+  const map = new Map();
+  const key = p => p[0] + "," + p[1];
+  for (const r of RAILS) {
+    for (const p of [r.pos1, r.pos2]) {
+      const k = key(p);
+      if (map.has(k)) map.get(k).count++;
+      else map.set(k, { id: k, x: p[0], z: p[1], count: 1 });
+    }
+  }
+  return [...map.values()];
+})();
+
+/* =====================================================================
+   3. 模拟地形
+   —— MTR 的 WorldMap 取每格顶面方块的 MapColor 再除以 1.5（TOP_VIEW），
+      这里用同样的配色与暗化系数，做出等效的俯视图
+   ===================================================================== */
+
+const MAP_COLORS = {
+  grass: [127, 178, 56], stone: [112, 112, 112], dirt: [151, 109, 77],
+  sand: [247, 233, 163], water: [64, 64, 255], gravel: [136, 126, 126],
+  wood: [160, 133, 92], leaves: [0, 124, 0], path: [148, 132, 100],
+};
+
+function hash2(x, z) {
+  let h = x * 374761393 + z * 668265263;
+  h = (h ^ (h >> 13)) * 1274126177;
+  return ((h ^ (h >> 16)) >>> 0) / 4294967295;
+}
+function vnoise(x, z, scale) {
+  const fx = x / scale, fz = z / scale;
+  const x0 = Math.floor(fx), z0 = Math.floor(fz);
+  const tx = fx - x0, tz = fz - z0;
+  const sx = tx * tx * (3 - 2 * tx), sz = tz * tz * (3 - 2 * tz);
+  const a = hash2(x0, z0), b = hash2(x0 + 1, z0), c = hash2(x0, z0 + 1), d = hash2(x0 + 1, z0 + 1);
+  return (a * (1 - sx) + b * sx) * (1 - sz) + (c * (1 - sx) + d * sx) * sz;
+}
+
+/** 生成一张「每格 1 像素」的地形底图，范围与轨道包围盒对齐到 16 的整数倍。 */
+function buildTerrainBase(minX, minZ, maxX, maxZ) {
+  const x0 = Math.floor(minX / 16) * 16, z0 = Math.floor(minZ / 16) * 16;
+  const w = Math.ceil((maxX - x0) / 16) * 16, h = Math.ceil((maxZ - z0) / 16) * 16;
+  const data = new Uint8ClampedArray(w * h * 4);
+
+  for (let z = 0; z < h; z++) {
+    for (let x = 0; x < w; x++) {
+      const wx = x0 + x, wz = z0 + z;
+      const n = vnoise(wx, wz, 34) * 0.6 + vnoise(wx, wz, 11) * 0.3 + vnoise(wx, wz, 4) * 0.1;
+      let col;
+      if (n < 0.30) col = MAP_COLORS.water;
+      else if (n < 0.35) col = MAP_COLORS.sand;
+      else if (n > 0.76) col = MAP_COLORS.stone;
+      else if (n > 0.70) col = MAP_COLORS.gravel;
+      else col = MAP_COLORS.grass;
+
+      // 站场区域铺一层道砟色，让轨道看起来压在场地里
+      const inYard = wx > 4 && wx < 68 && wz > -22 && wz < 118;
+      if (inYard) {
+        const y = vnoise(wx, wz, 7);
+        if (y < 0.42) col = MAP_COLORS.dirt;
+        else if (y < 0.50) col = MAP_COLORS.path;
+      }
+      // 零散树丛
+      if (col === MAP_COLORS.grass && vnoise(wx, wz, 2.2) > 0.88) col = MAP_COLORS.leaves;
+
+      const i = (z * w + x) * 4;
+      data[i] = col[0]; data[i + 1] = col[1]; data[i + 2] = col[2]; data[i + 3] = 255;
+    }
+  }
+  return { x0, z0, w, h, data };
+}
+
+let terrainBase = null, terrainCache = null, terrainKey = "";
+
+function getTerrain() {
+  const b = boundsOfRails();
+  const key = [b.minX, b.minZ, b.maxX, b.maxZ].map(v => Math.round(v)).join(",");
+  if (!terrainBase || key !== terrainKey) {
+    terrainBase = buildTerrainBase(b.minX - 24, b.minZ - 24, b.maxX + 24, b.maxZ + 24);
+    terrainKey = key;
+    terrainCache = null;
+  }
+  if (!terrainCache) {
+    const t = terrainBase;
+    const cv = document.createElement("canvas");
+    cv.width = t.w; cv.height = t.h;
+    const g = cv.getContext("2d");
+    const img = g.createImageData(t.w, t.h);
+    const dim = Math.max(0.05, P.terrainDim);
+    for (let i = 0; i < t.data.length; i += 4) {
+      img.data[i] = t.data[i] / dim;
+      img.data[i + 1] = t.data[i + 1] / dim;
+      img.data[i + 2] = t.data[i + 2] / dim;
+      img.data[i + 3] = 255;
+    }
+    g.putImageData(img, 0, 0);
+    terrainCache = { cv, x0: t.x0, z0: t.z0, w: t.w, h: t.h };
+  }
+  return terrainCache;
+}
+
+/* =====================================================================
+   4. 布局与视图变换（严格对齐 Java 实现）
+   ===================================================================== */
+
+const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+
+function layout() {
+  const W = P.guiWidth, H = P.guiHeight;
+  const listWidth  = P.listAuto  ? clamp(Math.round(W / 6), 64, 150) : P.listWidth;
+  const colorWidth = P.colorAuto ? clamp(Math.round(W / 9), 58, 100) : P.colorWidth;
+  return {
+    listWidth, colorWidth,
+    canvasLeft: listWidth,
+    canvasRight: Math.max(listWidth + 60, W - colorWidth),
+    canvasTop: P.textHeight * 2 + 4,
+    canvasBottom: H - P.textHeight * 2 - 2,
+  };
+}
+
+function boundsOfRails() {
+  let minX = Infinity, minZ = Infinity, maxX = -Infinity, maxZ = -Infinity;
+  for (const r of RAILS) for (const p of r.path) {
+    if (p[0] < minX) minX = p[0]; if (p[0] > maxX) maxX = p[0];
+    if (p[1] < minZ) minZ = p[1]; if (p[1] > maxZ) maxZ = p[1];
+  }
+  return { minX, minZ, maxX, maxZ };
+}
+
+/* 视图状态（用户缩放/平移叠加在自动适配之上） */
+const view = { userScale: 1, panX: 0, panY: 0 };
+
+/** 每帧计算：与 Java 的 updateView() 同一套公式。 */
+function computeView(L) {
+  const b = boundsOfRails();
+  const cx = (b.minX + b.maxX) / 2, cz = (b.minZ + b.maxZ) / 2;
+  const cw = Math.max(1, L.canvasRight - L.canvasLeft - 20);
+  const ch = Math.max(1, L.canvasBottom - L.canvasTop - 20);
+  const ww = Math.max(b.maxX - b.minX, 0.5), wh = Math.max(b.maxZ - b.minZ, 0.5);
+  const fit = clamp(Math.min(cw / ww, ch / wh), 0.05, 12);
+  const scale = fit * view.userScale;
+  return {
+    cx, cz, fit, scale,
+    sx: x => (L.canvasLeft + L.canvasRight) / 2 + (x - cx) * scale + view.panX,
+    sy: z => (L.canvasTop + L.canvasBottom) / 2 + (z - cz) * scale + view.panY,
+  };
+}
+
+/* =====================================================================
+   5. 绘制
+   ===================================================================== */
+
+const cv = document.getElementById("mc");
+const ctx = cv.getContext("2d");
+
+/* ---- 交互状态 ---- */
+const ui = {
+  selectedRail: -1, hoverRail: -1,
+  selectedNode1: null, selectedNode2: null, hoverNode: null,
+  dragging: false, dragSX: 0, dragSY: 0, dragOX: 0, dragOY: 0,
+  scroll: 0, selectedColor: 14, showTerrain: true,
+  status: null,
+};
+
+const COLOR_KEYS = ["white","orange","magenta","light_blue","yellow","lime","pink","gray",
+                    "light_gray","cyan","purple","blue","brown","green","red","black"];
+const COLOR_HEX = ["#ffffff","#ff8c00","#ff00ff","#87ceeb","#ffff00","#7fff00","#ff69b4","#808080",
+                   "#c0c0c0","#00ffff","#800080","#0000ff","#8b4513","#00ff00","#ff0000","#000000"];
+const COLOR_NAMES = ["白","橙","洋红","浅蓝","黄","黄绿","粉","灰","浅灰","青","紫","蓝","棕","绿","红","黑"];
+const COLOR_NAMES_EN = ["White","Orange","Magenta","Light blue","Yellow","Lime","Pink","Gray",
+                        "Light gray","Cyan","Purple","Blue","Brown","Green","Red","Black"];
+
+/* 原型里的界面文案（对应 Lang.gui(...)，这里做中英切换示意） */
+let LANG = "zh";
+const T = {
+  zh: {
+    title:"MTR 信号调度板", listHeader:n=>`轨道 (${n})`,
+    noRails:"附近未发现轨道", noRailsHint:"请靠近轨道后点刷新",
+    selNone:"未选择节点", selOne:"已选节点 A，请选节点 B", selBoth:"已选 A + B，请选颜色后连接",
+    canvasInfo:(n,s)=>`节点 ${n} · 缩放 ${s}`,
+    signalColors:"信号颜色",
+    platform:"站台", siding:"存车", occupied:"占用",
+    railSpeed:v=>`${v} km/h`, railLen:v=>`${v}格`, railColors:v=>`${v}色`,
+    btns:["连接","断开","清空","复位视图","刷新"],
+    terrainOn:"地形:开", terrainOff:"地形:关",
+    hint:"左侧点选轨道；画布左键选节点，右键取消，中键拖动，滚轮缩放",
+    selected:"已选中 #%s：%s", deselected:"已取消选中轨道",
+    colorPicked:c=>`已选颜色：${c}`,
+    sent:(c)=>`已发送连接请求 (${c})`, needTwo:"请先选择两个节点",
+    ready:"两个节点已选好，选颜色后点「连接」或「断开」",
+  },
+  en: {
+    title:"MTR Signal Dashboard", listHeader:n=>`Rails (${n})`,
+    noRails:"No rails found nearby", noRailsHint:"Move closer to a rail, then press Refresh",
+    selNone:"No node selected", selOne:"Node A selected - pick node B", selBoth:"A + B selected - pick a colour, then connect",
+    canvasInfo:(n,s)=>`Nodes ${n} · Zoom ${s}`,
+    signalColors:"Signal colours",
+    platform:"Platform", siding:"Siding", occupied:"Occupied",
+    railSpeed:v=>`${v} km/h`, railLen:v=>`${v} blocks`, railColors:v=>`${v} colours`,
+    btns:["Connect","Disconnect","Clear","Reset view","Refresh"],
+    terrainOn:"Terrain: On", terrainOff:"Terrain: Off",
+    hint:"Click a rail on the left; on the map left-click a node, right-click to cancel, middle-drag to pan, scroll to zoom",
+    selected:"Selected #%s: %s", deselected:"Rail deselected",
+    colorPicked:c=>`Colour: ${c}`,
+    sent:c=>`Connect request sent (${c})`, needTwo:"Select two nodes first",
+    ready:"Both nodes selected - pick a colour, then Connect or Disconnect",
+  },
+};
+const t = () => T[LANG];
+const colorName = i => (LANG === "zh" ? COLOR_NAMES : COLOR_NAMES_EN)[i];
+
+function setFont(g, size) {
+  g.font = `${size}px "Microsoft YaHei","PingFang SC","Noto Sans SC",sans-serif`;
+  g.textBaseline = "top";
+}
+function text(g, s, x, y, color, size) {
+  setFont(g, size || P.textHeight);
+  g.fillStyle = color;
+  g.fillText(s, x, y);
+}
+function textW(s, size) {
+  setFont(ctx, size || P.textHeight);
+  return ctx.measureText(s).width;
+}
+function trimToWidth(s, maxW) {
+  if (maxW <= 0) return "";
+  if (textW(s) <= maxW) return s;
+  const ell = "…";
+  let lo = 0, hi = s.length;
+  while (lo < hi) {
+    const mid = (lo + hi + 1) >> 1;
+    if (textW(s.slice(0, mid)) + textW(ell) <= maxW) lo = mid; else hi = mid - 1;
+  }
+  return s.slice(0, lo) + ell;
+}
+function rect(g, x1, y1, x2, y2, color) { g.fillStyle = color; g.fillRect(x1, y1, x2 - x1, y2 - y1); }
+
+/** 用多个小矩形拼出粗线 —— 与 Java 的 drawThickLine 完全一致的做法。 */
+function thickLine(g, x1, y1, x2, y2, thickness, color) {
+  const dx = x2 - x1, dy = y2 - y1;
+  const len = Math.hypot(dx, dy);
+  if (len < 0.01) return;
+  const half = thickness / 2;
+  const steps = clamp(Math.ceil(len / 1.5), 1, 96);
+  g.fillStyle = color;
+  for (let i = 0; i <= steps; i++) {
+    const tt = i / steps;
+    const x = x1 + dx * tt, y = y1 + dy * tt;
+    g.fillRect(x - half, y - half, thickness, thickness);
+  }
+}
+
+function railDescription(r) {
+  const parts = [];
+  if (r.platform) parts.push("[" + t().platform + "]");
+  else if (r.siding) parts.push("[" + t().siding + "]");
+  parts.push(t().railSpeed(Math.round(r.speed)));
+  parts.push(t().railLen(Math.round(r.length)));
+  if (r.colors.length) parts.push(t().railColors(r.colors.length));
+  if (r.occupied) parts.push(t().occupied);
+  return parts.join(" ");
+}
+
+function draw() {
+  const W = P.guiWidth, H = P.guiHeight;
+  cv.width = W; cv.height = H;
+  cv.style.width = (W * P.previewScale) + "px";
+  cv.style.height = (H * P.previewScale) + "px";
+  cv.classList.toggle("pixelated", P.pixelated);
+
+  const L = layout();
+  const V = computeView(L);
+
+  ctx.imageSmoothingEnabled = !P.pixelated;
+  rect(ctx, 0, 0, W, H, P.bgWindow);
+
+  text(ctx, t().title, P.textPadding, P.textPadding, P.textPrimary);
+  drawRailList(L);
+  drawCanvas(L, V);
+  drawColorPanel(L);
+
+  const status = ui.status || t().hint;
+  text(ctx, status, P.textPadding, H - P.textHeight - 2, P.textSecondary);
+
+  /* 顶栏信息 */
+  document.getElementById("infoSize").textContent = W + " × " + H;
+  document.getElementById("infoReal").textContent = W + " × " + H;
+  const share = ((L.canvasRight - L.canvasLeft) / W * 100).toFixed(0);
+  document.getElementById("infoCanvas").textContent = share + "%  (" + (L.canvasRight - L.canvasLeft) + " 单位)";
+  document.getElementById("infoScale").textContent = V.scale.toFixed(2) + "×";
+
+  // 交给外部做命中测试用
+  ui._L = L; ui._V = V;
+}
+
+/* ---------- 左侧轨道列表 ---------- */
+function rowTop(L) { return L.canvasTop + P.lineHeight + 2; }
+function maxRows(L) { return Math.max(0, Math.floor((L.canvasBottom - rowTop(L)) / P.lineHeight)); }
+
+function drawRailList(L) {
+  rect(ctx, 0, L.canvasTop, L.listWidth, L.canvasBottom, P.bgPanel);
+  text(ctx, t().listHeader(RAILS.length), P.textPadding, L.canvasTop + 2, P.textSecondary);
+
+  const top = rowTop(L), rows = maxRows(L);
+  const maxScroll = Math.max(0, RAILS.length - rows);
+  ui.scroll = clamp(ui.scroll, 0, maxScroll);
+
+  const count = Math.min(RAILS.length - ui.scroll, rows);
+  for (let i = 0; i < count; i++) {
+    const idx = ui.scroll + i;
+    const r = RAILS[idx];
+    const y = top + i * P.lineHeight;
+
+    if (idx === ui.selectedRail) rect(ctx, 0, y, L.listWidth, y + P.lineHeight - 1, P.rowSelected);
+    else if (idx === ui.hoverRail) rect(ctx, 0, y, L.listWidth, y + P.lineHeight - 1, P.rowHover);
+
+    // 占用指示条
+    rect(ctx, 0, y, 2, y + P.lineHeight - 1, r.occupied ? "#ff0000" : "#00aa00");
+
+    // 信号颜色块（从右往左，最多 maxSwatches 个，垂直居中）
+    const n = Math.min(r.colors.length, P.maxSwatches);
+    const swatchTop = y + Math.floor((P.lineHeight - P.swatchH) / 2);
+    for (let c = 0; c < n; c++) {
+      const right = L.listWidth - P.swatchW - c * P.swatchGap;
+      rect(ctx, right - P.swatchW, swatchTop, right, swatchTop + P.swatchH, r.colors[c]);
+    }
+
+    // 行文本
+    const sw = n === 0 ? P.swatchW + 2 : n * P.swatchGap + P.swatchW + 2;
+    const label = "#" + (idx + 1) + " " +
+      (r.platform ? t().platform + " " : r.siding ? t().siding + " " : "") + Math.round(r.speed);
+    text(ctx, trimToWidth(label, L.listWidth - P.textPadding - sw), P.textPadding, y,
+         idx === ui.selectedRail ? P.rowTextSelected : P.textPrimary);
+  }
+
+  // 滚动条
+  if (rows > 0 && RAILS.length > rows) {
+    const trackH = rows * P.lineHeight;
+    const thumbH = Math.max(6, trackH * rows / RAILS.length);
+    const thumbY = top + (trackH - thumbH) * ui.scroll / maxScroll;
+    rect(ctx, L.listWidth - 2, top, L.listWidth - 1, top + trackH, P.scrollTrack);
+    rect(ctx, L.listWidth - 2, thumbY, L.listWidth - 1, thumbY + thumbH, P.scrollThumb);
+  }
+
+  if (RAILS.length === 0) {
+    text(ctx, t().noRails, P.textPadding, top + 4, P.textDim);
+    text(ctx, t().noRailsHint, P.textPadding, top + 4 + P.lineHeight, P.textDim);
+  }
+}
+
+/* ---------- 中央画布 ---------- */
+function drawCanvas(L, V) {
+  rect(ctx, L.canvasLeft, L.canvasTop, L.canvasRight, L.canvasBottom, P.bgCanvas);
+
+  // 地形底图
+  if (P.showTerrain) {
+    const terr = getTerrain();
+    ctx.save();
+    ctx.beginPath();
+    ctx.rect(L.canvasLeft, L.canvasTop, L.canvasRight - L.canvasLeft, L.canvasBottom - L.canvasTop);
+    ctx.clip();
+    ctx.globalAlpha = P.terrainAlpha;
+    ctx.imageSmoothingEnabled = false;
+    ctx.drawImage(terr.cv,
+      V.sx(terr.x0), V.sy(terr.z0),
+      terr.w * V.scale, terr.h * V.scale);
+    ctx.restore();
+  }
+
+  // 网格
+  if (P.showGrid) {
+    ctx.save();
+    ctx.beginPath();
+    ctx.rect(L.canvasLeft, L.canvasTop, L.canvasRight - L.canvasLeft, L.canvasBottom - L.canvasTop);
+    ctx.clip();
+    ctx.strokeStyle = "rgba(255,255,255,.10)";
+    ctx.lineWidth = 1;
+    const b = boundsOfRails();
+    const g0x = Math.floor(b.minX / P.gridStep) * P.gridStep;
+    const g0z = Math.floor(b.minZ / P.gridStep) * P.gridStep;
+    for (let x = g0x; x < b.maxX + P.gridStep; x += P.gridStep) {
+      const sx = Math.round(V.sx(x)) + .5;
+      ctx.beginPath(); ctx.moveTo(sx, L.canvasTop); ctx.lineTo(sx, L.canvasBottom); ctx.stroke();
+    }
+    for (let z = g0z; z < b.maxZ + P.gridStep; z += P.gridStep) {
+      const sy = Math.round(V.sy(z)) + .5;
+      ctx.beginPath(); ctx.moveTo(L.canvasLeft, sy); ctx.lineTo(L.canvasRight, sy); ctx.stroke();
+    }
+    ctx.restore();
+  }
+
+  ctx.save();
+  ctx.beginPath();
+  ctx.rect(L.canvasLeft, L.canvasTop, L.canvasRight - L.canvasLeft, L.canvasBottom - L.canvasTop);
+  ctx.clip();
+
+  // 轨道折线
+  for (const r of RAILS) {
+    drawRailPath(V, r, r.occupied ? P.railOccupied : P.railNormal, P.railWidth);
+  }
+  if (ui.selectedRail >= 0 && ui.selectedRail < RAILS.length) {
+    drawRailPath(V, RAILS[ui.selectedRail], P.railSelected, P.railWidthSelected);
+  }
+
+  // 节点
+  if (P.showNodes) {
+    for (const nd of NODES) {
+      const x = V.sx(nd.x), y = V.sy(nd.z);
+      let color, radius;
+      if (nd.id === ui.selectedNode1)      { color = P.nodeA;        radius = P.nodeRadiusSelected; }
+      else if (nd.id === ui.selectedNode2) { color = P.nodeB;        radius = P.nodeRadiusSelected; }
+      else if (nd.id === ui.hoverNode)     { color = P.nodeHover;    radius = P.nodeRadiusHover; }
+      else if (nd.count >= 2)              { color = P.nodeJunction; radius = P.nodeRadiusJunction; }
+      else                                 { color = P.nodeNormal;   radius = P.nodeRadius; }
+      rect(ctx, x - radius, y - radius, x + radius, y + radius, color);
+    }
+  }
+  ctx.restore();
+
+  // 画布左上角信息
+  const sel = ui.selectedNode1 === null ? t().selNone
+            : ui.selectedNode2 === null ? t().selOne : t().selBoth;
+  text(ctx, sel, L.canvasLeft + P.textPadding, L.canvasTop + 3, P.textPrimary);
+  text(ctx, t().canvasInfo(NODES.length, (V.scale).toFixed(1)),
+       L.canvasLeft + P.textPadding, L.canvasTop + 3 + P.lineHeight, P.textSecondary);
+}
+
+function drawRailPath(V, r, color, width) {
+  for (let i = 0; i + 1 < r.path.length; i++) {
+    thickLine(ctx, V.sx(r.path[i][0]), V.sy(r.path[i][1]),
+              V.sx(r.path[i + 1][0]), V.sy(r.path[i + 1][1]), width, color);
+  }
+  if (P.showRailMarkers && r.colors.length) {
+    const mid = Math.floor(r.path.length / 2);
+    const mx = V.sx(r.path[mid][0]), my = V.sy(r.path[mid][1]);
+    const rad = width + 1;
+    rect(ctx, mx - rad, my - rad, mx + rad, my + rad, r.colors[0]);
+  }
+}
+
+/* ---------- 右侧色板 ---------- */
+function colorGrid(L) {
+  const left = P.guiWidth - L.colorWidth;
+  const top = L.canvasTop + P.lineHeight + 2;
+  const cell = Math.max(8, Math.min(20, Math.floor((L.colorWidth - P.textPadding * 2) / 4)));
+  return { left, top, cell };
+}
+function buttonMetrics(L) {
+  const g = colorGrid(L);
+  const top = g.top + 4 * g.cell + P.lineHeight + 4;
+  const avail = L.canvasBottom - top - 2;
+  const h = clamp(Math.floor(avail / 6) - P.buttonGap, P.buttonMinH, P.buttonMaxH);
+  return { top, h, step: h + P.buttonGap };
+}
+function buttonLabels() {
+  return [...t().btns, ui.showTerrain ? t().terrainOn : t().terrainOff];
+}
+const BTN_COLORS = ["#2e7d32", "#8b2500", "#444444", "#37474f", "#1565c0", "#5d4037"];
+
+function drawColorPanel(L) {
+  const left = P.guiWidth - L.colorWidth;
+  rect(ctx, left, L.canvasTop, P.guiWidth, L.canvasBottom, P.bgPanel);
+  text(ctx, t().signalColors, left + P.textPadding, L.canvasTop + 2, P.textSecondary);
+
+  const g = colorGrid(L);
+  for (let i = 0; i < 16; i++) {
+    const col = i % 4, row = (i / 4) | 0;
+    const x = g.left + P.textPadding + col * g.cell;
+    const y = g.top + row * g.cell;
+    rect(ctx, x, y, x + g.cell - 2, y + g.cell - 2, COLOR_HEX[i]);
+    if (i === ui.selectedColor) {
+      rect(ctx, x - 1, y - 1, x + g.cell - 1, y, "#ffffff");
+      rect(ctx, x - 1, y + g.cell - 2, x + g.cell - 1, y + g.cell - 1, "#ffffff");
+      rect(ctx, x - 1, y - 1, x, y + g.cell - 1, "#ffffff");
+      rect(ctx, x + g.cell - 2, y - 1, x + g.cell - 1, y + g.cell - 1, "#ffffff");
+    }
+  }
+
+  const gridBottom = g.top + 4 * g.cell;
+  text(ctx, colorName(ui.selectedColor), g.left + P.textPadding, gridBottom + 3, P.textPrimary);
+
+  const bm = buttonMetrics(L);
+  const labels = buttonLabels();
+  for (let i = 0; i < labels.length; i++) {
+    const y = bm.top + i * bm.step;
+    if (y + bm.h > L.canvasBottom) break;
+    const x = left + P.textPadding, w = L.colorWidth - P.textPadding * 2;
+    rect(ctx, x, y, x + w, y + bm.h, BTN_COLORS[i]);
+    const label = trimToWidth(labels[i], w - 4);
+    setFont(ctx, P.textHeight);
+    ctx.fillStyle = "#ffffff";
+    ctx.fillText(label, x + (w - textW(label)) / 2, y + (bm.h - P.textHeight) / 2 + 1);
+  }
+}
+
+/* =====================================================================
+   6. 交互
+   ===================================================================== */
+
+function toGui(ev) {
+  const r = cv.getBoundingClientRect();
+  return {
+    x: (ev.clientX - r.left) / r.width * cv.width,
+    y: (ev.clientY - r.top) / r.height * cv.height,
+  };
+}
+function inCanvas(p, L) {
+  return p.x >= L.canvasLeft && p.x <= L.canvasRight && p.y >= L.canvasTop && p.y <= L.canvasBottom;
+}
+function nodeAt(p, L, V) {
+  let best = null, bd = 10;
+  for (const nd of NODES) {
+    const d = Math.hypot(p.x - V.sx(nd.x), p.y - V.sy(nd.z));
+    if (d < bd) { bd = d; best = nd; }
+  }
+  return best ? best.id : null;
+}
+
+cv.addEventListener("mousemove", e => {
+  const L = ui._L, V = ui._V; if (!L) return;
+  const p = toGui(e);
+
+  if (ui.dragging) {
+    view.panX = ui.dragOX + (p.x - ui.dragSX);
+    view.panY = ui.dragOY + (p.y - ui.dragSY);
+    draw(); return;
+  }
+
+  const prevHoverRail = ui.hoverRail, prevHoverNode = ui.hoverNode;
+
+  ui.hoverRail = -1;
+  if (p.x >= 0 && p.x < L.listWidth && p.y >= rowTop(L) && p.y < L.canvasBottom) {
+    const idx = ui.scroll + Math.floor((p.y - rowTop(L)) / P.lineHeight);
+    if (idx >= 0 && idx < RAILS.length) ui.hoverRail = idx;
+  }
+  ui.hoverNode = inCanvas(p, L) ? nodeAt(p, L, V) : null;
+
+  if (prevHoverRail !== ui.hoverRail || prevHoverNode !== ui.hoverNode) draw();
+});
+
+cv.addEventListener("mousedown", e => {
+  const L = ui._L; if (!L) return;
+  const p = toGui(e);
+  if (inCanvas(p, L) && e.button === 1) {
+    ui.dragging = true; ui.dragSX = p.x; ui.dragSY = p.y;
+    ui.dragOX = view.panX; ui.dragOY = view.panY;
+    e.preventDefault();
+  }
+});
+
+window.addEventListener("mouseup", () => {
+  if (ui.dragging) { ui.dragging = false; draw(); }
+});
+
+cv.addEventListener("click", e => {
+  const L = ui._L, V = ui._V; if (!L) return;
+  const p = toGui(e);
+  if (e.button !== 0) return;
+
+  // 右侧面板
+  const panelLeft = P.guiWidth - L.colorWidth;
+  if (p.x >= panelLeft && p.x <= P.guiWidth && p.y >= L.canvasTop && p.y <= L.canvasBottom) {
+    const g = colorGrid(L);
+    for (let i = 0; i < 16; i++) {
+      const col = i % 4, row = (i / 4) | 0;
+      const x = g.left + P.textPadding + col * g.cell, y = g.top + row * g.cell;
+      if (p.x >= x && p.x <= x + g.cell && p.y >= y && p.y <= y + g.cell) {
+        ui.selectedColor = i; ui.status = t().colorPicked(colorName(i)); draw(); return;
+      }
+    }
+    const bm = buttonMetrics(L);
+    for (let i = 0; i < 6; i++) {
+      const y = bm.top + i * bm.step;
+      if (y + bm.h > L.canvasBottom) break;
+      if (p.y >= y && p.y <= y + bm.h) { onButton(i); return; }
+    }
+    return;
+  }
+
+  // 左侧列表
+  if (p.x >= 0 && p.x < L.listWidth && p.y >= rowTop(L) && p.y < L.canvasBottom) {
+    const idx = ui.scroll + Math.floor((p.y - rowTop(L)) / P.lineHeight);
+    if (idx >= 0 && idx < RAILS.length) {
+      if (idx === ui.selectedRail) { ui.selectedRail = -1; ui.status = t().deselected; }
+      else {
+        ui.selectedRail = idx;
+        // 视图中心移到该轨道中点（与 Java 的 focusOnRail 同一反解）
+        const mid = RAILS[idx].path[Math.floor(RAILS[idx].path.length / 2)];
+        view.panX = -(mid[0] - V.cx) * V.scale;
+        view.panY = -(mid[1] - V.cz) * V.scale;
+        ui.status = t().selected(idx + 1, railDescription(RAILS[idx]));
+      }
+      draw();
+    }
+    return;
+  }
+
+  // 画布
+  if (inCanvas(p, L)) {
+    if (e.button === 2 || (e.buttons & 2)) { ui.selectedNode1 = ui.selectedNode2 = null; ui.selectedRail = -1; draw(); return; }
+    const id = nodeAt(p, L, V);
+    if (id) {
+      if (ui.selectedNode1 === id) { ui.selectedNode1 = ui.selectedNode2; ui.selectedNode2 = null; }
+      else if (ui.selectedNode2 === id) { ui.selectedNode2 = null; }
+      else if (ui.selectedNode1 === null) { ui.selectedNode1 = id; }
+      else if (ui.selectedNode2 === null) { ui.selectedNode2 = id; }
+      else { ui.selectedNode1 = ui.selectedNode2; ui.selectedNode2 = id; }
+      if (ui.selectedNode1 && ui.selectedNode2) ui.status = t().ready;
+      draw();
+    }
+  }
+});
+
+cv.addEventListener("contextmenu", e => e.preventDefault());
+
+cv.addEventListener("wheel", e => {
+  const L = ui._L; if (!L) return;
+  const p = toGui(e);
+  if (p.x >= 0 && p.x < L.listWidth && p.y >= rowTop(L) && p.y < L.canvasBottom) {
+    ui.scroll -= Math.sign(e.deltaY) * 3; draw(); e.preventDefault(); return;
+  }
+  if (inCanvas(p, L)) {
+    view.userScale = clamp(view.userScale * Math.pow(1.15, -Math.sign(e.deltaY)), 0.1, 20);
+    draw(); e.preventDefault();
+  }
+}, { passive: false });
+
+function onButton(i) {
+  if (i === 0 || i === 1) {
+    if (ui.selectedNode1 === null || ui.selectedNode2 === null) ui.status = t().needTwo;
+    else ui.status = t().sent(colorName(ui.selectedColor));
+  } else if (i === 2) {
+    ui.selectedNode1 = ui.selectedNode2 = null; ui.selectedRail = -1; ui.status = "已清空选择";
+  } else if (i === 3) {
+    view.userScale = 1; view.panX = 0; view.panY = 0; ui.status = "视图已复位";
+  } else if (i === 4) {
+    ui.status = "已刷新：共 " + RAILS.length + " 条轨道";
+  } else if (i === 5) {
+    ui.showTerrain = !ui.showTerrain; P.showTerrain = ui.showTerrain;
+    ui.status = ui.showTerrain ? "地形底图已开启" : "地形底图已关闭";
+    syncControls();
+  }
+  draw();
+}
+
+/* =====================================================================
+   7. 设计面板（schema 驱动）
+   ===================================================================== */
+
+const GROUPS = [
+  { name:"预览窗口", items:[
+    { k:"guiWidth",  t:"int", label:"模拟窗口宽（GUI 单位）", min:240, max:900, step:2 },
+    { k:"guiHeight", t:"int", label:"模拟窗口高（GUI 单位）", min:150, max:560, step:2 },
+    { k:"previewScale", t:"int", label:"预览放大倍数", min:1, max:4, step:1 },
+    { k:"pixelated", t:"bool", label:"像素风缩放（关掉更清晰）" },
+    { k:"lang", t:"select", label:"界面语言", options:[["zh","中文"],["en","English"]] },
+  ]},
+  { name:"布局", items:[
+    { k:"listAuto", t:"bool", label:"左侧宽度自动 = clamp(w/6, 64, 150)" },
+    { k:"listWidth", t:"int", label:"左侧宽度", min:40, max:220, step:1, enabled:() => !P.listAuto },
+    { k:"colorAuto", t:"bool", label:"右侧宽度自动 = clamp(w/9, 58, 100)" },
+    { k:"colorWidth", t:"int", label:"右侧宽度", min:40, max:180, step:1, enabled:() => !P.colorAuto },
+  ]},
+  { name:"排版", items:[
+    { k:"textHeight", t:"int", label:"字号 TEXT_HEIGHT", min:6, max:14, step:1 },
+    { k:"lineHeight", t:"int", label:"行高 LINE_HEIGHT", min:8, max:22, step:1 },
+    { k:"textPadding", t:"int", label:"内边距 TEXT_PADDING", min:2, max:14, step:1 },
+  ]},
+  { name:"面板配色", items:[
+    { k:"bgWindow", t:"color", label:"窗口底色" },
+    { k:"bgPanel", t:"color", label:"左右面板底色" },
+    { k:"bgCanvas", t:"color", label:"画布底色" },
+    { k:"textPrimary", t:"color", label:"主文字" },
+    { k:"textSecondary", t:"color", label:"次文字" },
+    { k:"textDim", t:"color", label:"暗文字（空状态）" },
+  ]},
+  { name:"轨道与节点", items:[
+    { k:"railNormal", t:"color", label:"轨道 · 空闲" },
+    { k:"railOccupied", t:"color", label:"轨道 · 占用" },
+    { k:"railSelected", t:"color", label:"轨道 · 选中高亮" },
+    { k:"railWidth", t:"num", label:"线宽（普通）", min:0.5, max:6, step:0.1 },
+    { k:"railWidthSelected", t:"num", label:"线宽（选中）", min:0.5, max:8, step:0.1 },
+    { k:"nodeNormal", t:"color", label:"节点 · 普通" },
+    { k:"nodeJunction", t:"color", label:"节点 · 岔口" },
+    { k:"nodeHover", t:"color", label:"节点 · 悬停" },
+    { k:"nodeA", t:"color", label:"节点 · 选中 A" },
+    { k:"nodeB", t:"color", label:"节点 · 选中 B" },
+    { k:"nodeRadius", t:"num", label:"半径 · 普通", min:1, max:8, step:0.1 },
+    { k:"nodeRadiusJunction", t:"num", label:"半径 · 岔口", min:1, max:8, step:0.1 },
+    { k:"nodeRadiusHover", t:"num", label:"半径 · 悬停", min:1, max:8, step:0.1 },
+    { k:"nodeRadiusSelected", t:"num", label:"半径 · 选中", min:1, max:10, step:0.1 },
+    { k:"showNodes", t:"bool", label:"显示节点" },
+    { k:"showRailMarkers", t:"bool", label:"显示轨道中点的信号色块" },
+  ]},
+  { name:"左侧列表", items:[
+    { k:"rowHover", t:"color", label:"行底色 · 悬停" },
+    { k:"rowSelected", t:"color", label:"行底色 · 选中" },
+    { k:"rowTextSelected", t:"color", label:"行文字 · 选中" },
+    { k:"scrollTrack", t:"color", label:"滚动条轨道" },
+    { k:"scrollThumb", t:"color", label:"滚动条滑块" },
+    { k:"swatchW", t:"int", label:"色块宽", min:2, max:12, step:1 },
+    { k:"swatchH", t:"int", label:"色块高", min:2, max:14, step:1 },
+    { k:"swatchGap", t:"int", label:"色块间距", min:3, max:14, step:1 },
+    { k:"maxSwatches", t:"int", label:"最多显示几个色块", min:0, max:8, step:1 },
+  ]},
+  { name:"地形底图", items:[
+    { k:"showTerrain", t:"bool", label:"显示地形" },
+    { k:"terrainDim", t:"num", label:"暗化系数（MTR 用 1.5）", min:1, max:3, step:0.05 },
+    { k:"terrainAlpha", t:"num", label:"不透明度", min:0.1, max:1, step:0.05 },
+    { k:"showGrid", t:"bool", label:"显示网格" },
+    { k:"gridStep", t:"int", label:"网格间距（格）", min:4, max:64, step:4 },
+  ]},
+  { name:"右侧按钮", items:[
+    { k:"buttonMinH", t:"int", label:"按钮最小高", min:6, max:20, step:1 },
+    { k:"buttonMaxH", t:"int", label:"按钮最大高", min:8, max:30, step:1 },
+    { k:"buttonGap", t:"int", label:"按钮间距", min:0, max:10, step:1 },
+  ]},
+];
+
+const controls = [];
+
+function buildDesigner() {
+  const root = document.getElementById("designer");
+  root.innerHTML = "";
+  controls.length = 0;
+  for (const g of GROUPS) {
+    const sec = document.createElement("section");
+    sec.className = "group";
+    const h = document.createElement("h3");
+    h.textContent = g.name;
+    h.onclick = () => sec.classList.toggle("collapsed");
+    sec.appendChild(h);
+    const body = document.createElement("div");
+    body.className = "group-body";
+    for (const it of g.items) body.appendChild(makeControl(it));
+    sec.appendChild(body);
+    root.appendChild(sec);
+  }
+}
+
+function makeControl(it) {
+  const row = document.createElement("div");
+  row.className = "ctrl";
+  const name = document.createElement("span");
+  name.className = "ctrl-name";
+  name.textContent = it.label;
+  row.appendChild(name);
+
+  const readout = document.createElement("span");
+  readout.className = "ctrl-val";
+
+  let input;
+  if (it.t === "bool") {
+    input = document.createElement("input");
+    input.type = "checkbox";
+    input.checked = !!P[it.k];
+    readout.textContent = "";
+    input.oninput = () => { P[it.k] = input.checked; onChange(it.k); };
+  } else if (it.t === "color") {
+    input = document.createElement("input");
+    input.type = "color";
+    input.value = P[it.k];
+    readout.textContent = P[it.k];
+    input.oninput = () => { P[it.k] = input.value; readout.textContent = input.value; onChange(it.k); };
+  } else if (it.t === "select") {
+    input = document.createElement("select");
+    input.style.cssText = "grid-column:1/3;background:#1e2024;color:#e6e8eb;border:1px solid #2b2e33;border-radius:4px;padding:3px 6px;font-size:12px";
+    for (const [v, lbl] of it.options) {
+      const o = document.createElement("option");
+      o.value = v; o.textContent = lbl; input.appendChild(o);
+    }
+    input.value = P[it.k] !== undefined ? P[it.k] : it.k === "lang" ? LANG : "";
+    input.onchange = () => {
+      if (it.k === "lang") { LANG = input.value; }
+      else P[it.k] = input.value;
+      draw();
+    };
+    row.appendChild(input);
+    row.appendChild(readout);
+    controls.push({ it, input, readout });
+    return row;
+  } else {
+    input = document.createElement("input");
+    input.type = "range";
+    input.min = it.min; input.max = it.max; input.step = it.step;
+    input.value = P[it.k];
+    readout.textContent = fmt(P[it.k]);
+    input.oninput = () => {
+      P[it.k] = parseFloat(input.value);
+      readout.textContent = fmt(P[it.k]);
+      onChange(it.k);
+    };
+  }
+
+  row.appendChild(input);
+  row.appendChild(readout);
+  controls.push({ it, input, readout, row });
+  return row;
+}
+
+const fmt = v => (typeof v === "number" && !Number.isInteger(v)) ? v.toFixed(2) : String(v);
+
+function syncControls() {
+  for (const c of controls) {
+    if (c.it.t === "bool") c.input.checked = !!P[c.it.k];
+    else if (c.it.t === "select") c.input.value = c.it.k === "lang" ? LANG : P[c.it.k];
+    else { c.input.value = P[c.it.k]; c.readout.textContent = c.it.t === "color" ? P[c.it.k] : fmt(P[c.it.k]); }
+    if (c.row) c.row.classList.toggle("disabled", !!(c.it.enabled && !c.it.enabled()));
+  }
+}
+
+function onChange(key) {
+  if (["terrainDim"].includes(key)) terrainCache = null;
+  if (key === "showTerrain") ui.showTerrain = P.showTerrain;
+  syncControls();
+  draw();
+}
+
+/* =====================================================================
+   8. 导出
+   ===================================================================== */
+
+function toArgb(hex) {
+  const h = hex.replace("#", "").toUpperCase();
+  return "0xFF" + h;
+}
+
+function buildExport() {
+  const L = layout();
+  const lines = [];
+  const push = s => lines.push(s);
+
+  push("// ===== MTR 信号调度板 · 由网页原型导出的设计参数 =====");
+  push("// 模拟窗口 " + P.guiWidth + " × " + P.guiHeight + " GUI 单位");
+  push("// 画布占比 " + ((L.canvasRight - L.canvasLeft) / P.guiWidth * 100).toFixed(0) + "%"
+       + "  左侧 " + L.listWidth + "  右侧 " + L.colorWidth);
+  push("");
+  push("// ---------- 布局 ----------");
+  push("// Java: SignalDashboardScreen#init2()");
+  if (P.listAuto) {
+    push("int listWidth = clamp(width / 6, 64, 150);   // 自动，当前值 " + L.listWidth);
+  } else {
+    push("int listWidth = " + P.listWidth + ";");
+  }
+  if (P.colorAuto) {
+    push("int colorWidth = clamp(width / 9, 58, 100);  // 自动，当前值 " + L.colorWidth);
+  } else {
+    push("int colorWidth = " + P.colorWidth + ";");
+  }
+  push("canvasTop    = TEXT_HEIGHT * 2 + 4;");
+  push("canvasBottom = height - TEXT_HEIGHT * 2 - 2;");
+  push("");
+  push("// ---------- 排版 ----------");
+  push("int TEXT_HEIGHT   = " + P.textHeight + ";");
+  push("int LINE_HEIGHT   = " + P.lineHeight + ";");
+  push("int TEXT_PADDING  = " + P.textPadding + ";");
+  push("");
+  push("// ---------- 面板配色 ----------");
+  push("int ARGB_WINDOW      = " + toArgb(P.bgWindow) + ";");
+  push("int ARGB_BACKGROUND  = " + toArgb(P.bgPanel) + ";");
+  push("int ARGB_CANVAS      = " + toArgb(P.bgCanvas) + ";");
+  push("int ARGB_WHITE       = " + toArgb(P.textPrimary) + ";");
+  push("int ARGB_LIGHT_GRAY  = " + toArgb(P.textSecondary) + ";");
+  push("int ARGB_GRAY        = " + toArgb(P.textDim) + ";");
+  push("");
+  push("// ---------- 轨道与节点 ----------");
+  push("int ARGB_RAIL_FREE      = " + toArgb(P.railNormal) + ";");
+  push("int ARGB_RAIL_OCCUPIED  = " + toArgb(P.railOccupied) + ";");
+  push("int ARGB_RAIL_SELECTED  = " + toArgb(P.railSelected) + ";");
+  push("double RAIL_WIDTH          = " + P.railWidth.toFixed(1) + ";");
+  push("double RAIL_WIDTH_SELECTED = " + P.railWidthSelected.toFixed(1) + ";");
+  push("int ARGB_NODE_NORMAL    = " + toArgb(P.nodeNormal) + ";");
+  push("int ARGB_NODE_JUNCTION  = " + toArgb(P.nodeJunction) + ";");
+  push("int ARGB_NODE_HOVER     = " + toArgb(P.nodeHover) + ";");
+  push("int ARGB_NODE_A         = " + toArgb(P.nodeA) + ";");
+  push("int ARGB_NODE_B         = " + toArgb(P.nodeB) + ";");
+  push("double NODE_RADIUS           = " + P.nodeRadius.toFixed(1) + ";");
+  push("double NODE_RADIUS_JUNCTION  = " + P.nodeRadiusJunction.toFixed(1) + ";");
+  push("double NODE_RADIUS_HOVER     = " + P.nodeRadiusHover.toFixed(1) + ";");
+  push("double NODE_RADIUS_SELECTED  = " + P.nodeRadiusSelected.toFixed(1) + ";");
+  push("boolean SHOW_RAIL_MARKERS    = " + P.showRailMarkers + ";");
+  push("");
+  push("// ---------- 左侧列表 ----------");
+  push("int ARGB_ROW_HOVER     = " + toArgb(P.rowHover) + ";");
+  push("int ARGB_ROW_SELECTED  = " + toArgb(P.rowSelected) + ";");
+  push("int ARGB_ROW_TEXT_SEL  = " + toArgb(P.rowTextSelected) + ";");
+  push("int ARGB_SCROLL_TRACK  = " + toArgb(P.scrollTrack) + ";");
+  push("int ARGB_SCROLL_THUMB  = " + toArgb(P.scrollThumb) + ";");
+  push("int SWATCH_W        = " + P.swatchW + ";");
+  push("int SWATCH_H        = " + P.swatchH + ";");
+  push("int SWATCH_GAP      = " + P.swatchGap + ";");
+  push("int MAX_SWATCHES    = " + P.maxSwatches + ";");
+  push("");
+  push("// ---------- 地形底图 ----------");
+  push("boolean SHOW_TERRAIN   = " + P.showTerrain + ";");
+  push("double  TERRAIN_DIM    = " + P.terrainDim.toFixed(2) + ";   // MTR WorldMap 的 divideColorRGB 系数");
+  push("double  TERRAIN_ALPHA  = " + P.terrainAlpha.toFixed(2) + ";");
+  push("boolean SHOW_GRID      = " + P.showGrid + ";");
+  push("int     GRID_STEP      = " + P.gridStep + ";");
+  push("");
+  push("// ---------- 按钮 ----------");
+  push("int BUTTON_MIN_H = " + P.buttonMinH + ";");
+  push("int BUTTON_MAX_H = " + P.buttonMaxH + ";");
+  push("int BUTTON_GAP   = " + P.buttonGap + ";");
+  push("");
+  push("// ---------- 原始参数（JSON，便于我批量替换）----------");
+  push(JSON.stringify(P, null, 2));
+  return lines.join("\n");
+}
+
+/* =====================================================================
+   9. 启动
+   ===================================================================== */
+
+document.getElementById("btnExport").onclick = () => {
+  document.getElementById("exportText").value = buildExport();
+  document.getElementById("modal").classList.add("show");
+};
+document.getElementById("btnCloseModal").onclick = () => document.getElementById("modal").classList.remove("show");
+document.getElementById("btnCopy").onclick = async () => {
+  const ta = document.getElementById("exportText");
+  try { await navigator.clipboard.writeText(ta.value); document.getElementById("btnCopy").textContent = "已复制 ✓"; }
+  catch (_) { ta.select(); document.execCommand("copy"); document.getElementById("btnCopy").textContent = "已复制 ✓"; }
+  setTimeout(() => document.getElementById("btnCopy").textContent = "复制到剪贴板", 1400);
+};
+document.getElementById("btnReset").onclick = () => {
+  P = Object.assign({}, DEFAULTS);
+  ui.showTerrain = P.showTerrain;
+  ui.selectedRail = -1; ui.selectedNode1 = ui.selectedNode2 = null;
+  view.userScale = 1; view.panX = 0; view.panY = 0;
+  terrainCache = null;
+  syncControls(); draw();
+};
+
+buildDesigner();
+syncControls();
+draw();
+</script>
+</body>
+</html>
