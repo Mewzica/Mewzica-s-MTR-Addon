@@ -147,27 +147,6 @@ src/main/resources/
 └── assets/mewsmtr/               lang, models, textures
 ```
 
-### Design prototypes
-
-The UI is prototyped as standalone HTML files before it is ported to Java. They are self-contained single files with no build step — just open them in a browser.
-
-- `design/dashboard-prototype.html` — the signal dashboard. Mirrors the Java layout formulas, colours and drawing algorithms 1:1, with live controls for every tunable value and an **Export** button that prints the matching Java constants.
-- `design/driving-hud-editor.html` — a drag-and-drop editor for the driving HUD overlay. Move, resize, add and delete widgets over a preview of MTR's dashboard, then export the resulting anchors as Java constants.
-
-### Development checks
-
-Node scripts that verify the prototypes stay in sync with the Java constants:
-
-```bash
-node tools/prototype-check/check.js              # dashboard prototype
-node tools/prototype-check/check-hud-editor.js   # HUD editor, static checks
-node tools/prototype-check/run-hud-editor.js     # HUD editor, runtime checks
-```
-
-`tools/probe/` contains small standalone Java probes used to verify MTR's rail-maths API (round-tripping rail positions and lengths through the network).
-
----
-
 ## Notes on implementation
 
 A few things that are non-obvious, and are easy to get wrong:

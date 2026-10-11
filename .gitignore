@@ -26,6 +26,12 @@ run/
 # WorkBuddy AI project data
 .workbuddy-ai/
 
+# Local development tooling — UI prototypes and the scripts that check them.
+# Kept on disk, deliberately not published (they would dominate the repo's
+# language statistics, and they are not part of the mod itself).
+/design/
+/tools/
+
 # OS
 .DS_Store
 Thumbs.db
