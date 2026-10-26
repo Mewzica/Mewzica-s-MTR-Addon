@@ -2,6 +2,8 @@
 	"item.mewsmtr.signal_dashboard": "MTR Signal Dashboard",
 	"itemGroup.mewsmtr.main": "MTR Signal Dashboard",
 
+	"block.mewsmtr.tpws_grid": "TPWS Grid",
+
 	"category.mewsmtr.keybinding": "Mewzica's MTR Addon",
 	"key.mewsmtr.reverser_forward": "Reverser: Step toward Forward (Manual Driving)",
 	"key.mewsmtr.reverser_reverse": "Reverser: Step toward Reverse (Manual Driving)",

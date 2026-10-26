@@ -21,6 +21,10 @@ An item that opens a top-down view of the rails around you.
 - **Navigation** — scroll to zoom, middle-drag to pan, `Reset view` to fit the bounding box of the rails.
 - **Terrain toggle** — turn the backdrop off to free up VRAM on low-end machines.
 
+### Trackside props
+
+A **TPWS grid** block — a thin decorative plate that sits on the track bed between the rails, modelled in Blockbench. It is non-opaque and has no collision, so it reads as a track component rather than a full block.
+
 ### Manual driving
 
 Everything below shows up **inside MTR's own driving dashboard**, not as a separate overlay panel.
@@ -135,6 +139,7 @@ The jar is written to `build/libs/Mewzica-s-MTR-Addon-fabric-<version>+1.20.1.ja
 src/main/java/org/mtr/signaldashboard/
 ├── MTRSignalDashboard*           mod entrypoints and client init
 ├── Items                         item registration
+├── Blocks                        block registration (TPWS grid)
 ├── item/ItemSignalDashboard      the dashboard item
 ├── data/                         IGui (all layout constants), Lang, SignalRailData
 ├── client/                       DrivingHud (dashboard overlay), DriveInput (reverser keys)

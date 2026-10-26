@@ -70,7 +70,10 @@ public final class MTRSignalDashboard {
 		// 3. 注册物品（这一步只是把注册请求入队）
 		Items.init();
 
-		// 4. ★ 关键：flush 所有延迟注册。漏掉这一步物品就永远注册不上。
+		// 4. 注册方块（同样只是入队）
+		Blocks.init();
+
+		// 5. ★ 关键：flush 所有延迟注册。漏掉这一步物品就永远注册不上。
 		REGISTRY.init();
 
 		LOGGER.info("Mewzica's MTR Addon ready");

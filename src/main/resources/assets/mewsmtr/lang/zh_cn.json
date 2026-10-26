@@ -2,6 +2,8 @@
 	"item.mewsmtr.signal_dashboard": "MTR 信号调度板",
 	"itemGroup.mewsmtr.main": "MTR 信号调度板",
 
+	"block.mewsmtr.tpws_grid": "TPWS 线圈",
+
 	"category.mewsmtr.keybinding": "Mewzica's MTR Addon",
 	"key.mewsmtr.reverser_forward": "反相器：推向前进位（手动驾驶）",
 	"key.mewsmtr.reverser_reverse": "反相器：推向后进位（手动驾驶）",
