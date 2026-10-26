@@ -3,6 +3,7 @@ package org.mtr.signaldashboard;
 import org.mtr.mapping.holder.Block;
 import org.mtr.mapping.mapper.BlockHelper;
 import org.mtr.mapping.registry.BlockRegistryObject;
+import org.mtr.signaldashboard.block.BlockTpwsGrid;
 
 /**
  * 方块注册。
@@ -20,6 +21,9 @@ import org.mtr.mapping.registry.BlockRegistryObject;
  * <p>和物品一样，这里用的也是<b>本模组自己的</b> {@link MTRSignalDashboard#REGISTRY}，
  * 原因见主类注释里的踩坑记录。
  *
+ * <p>方块本体是 {@link BlockTpwsGrid}，带水平朝向（{@code facing}），
+ * 放置时会自动转向玩家面朝的方向。
+ *
  * @author Mewzica
  */
 public final class Blocks {
@@ -27,7 +31,7 @@ public final class Blocks {
 	/** TPWS 感应网格方块（含对应的方块物品）。 */
 	public static final BlockRegistryObject TPWS_GRID = MTRSignalDashboard.REGISTRY.registerBlockWithBlockItem(
 			MTRSignalDashboard.identifier("tpws_grid"),
-			() -> new Block(BlockHelper.createBlockSettings(true, true).strength(2.0F).noCollision()),
+			() -> new Block(new BlockTpwsGrid(BlockHelper.createBlockSettings(true, true).strength(2.0F).noCollision())),
 			org.mtr.mod.CreativeModeTabs.CORE
 	);
 

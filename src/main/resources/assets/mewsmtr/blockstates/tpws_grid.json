@@ -1,7 +1,19 @@
 {
 	"variants": {
-		"": {
+		"facing=north": {
 			"model": "mewsmtr:block/tpws_grid"
+		},
+		"facing=east": {
+			"model": "mewsmtr:block/tpws_grid",
+			"y": 90
+		},
+		"facing=south": {
+			"model": "mewsmtr:block/tpws_grid",
+			"y": 180
+		},
+		"facing=west": {
+			"model": "mewsmtr:block/tpws_grid",
+			"y": 270
 		}
 	}
 }
