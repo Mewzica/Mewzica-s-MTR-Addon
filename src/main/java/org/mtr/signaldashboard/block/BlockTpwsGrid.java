@@ -1,10 +1,15 @@
 package org.mtr.signaldashboard.block;
 
+import org.mtr.mapping.holder.Block;
+import org.mtr.mapping.holder.BlockPos;
 import org.mtr.mapping.holder.BlockSettings;
 import org.mtr.mapping.holder.BlockState;
+import org.mtr.mapping.holder.BlockView;
 import org.mtr.mapping.holder.Direction;
 import org.mtr.mapping.holder.ItemPlacementContext;
 import org.mtr.mapping.holder.Property;
+import org.mtr.mapping.holder.ShapeContext;
+import org.mtr.mapping.holder.VoxelShape;
 import org.mtr.mapping.mapper.BlockExtension;
 import org.mtr.mapping.mapper.DirectionHelper;
 import org.mtr.mapping.tool.HolderBase;
@@ -36,6 +41,14 @@ import java.util.List;
  */
 public class BlockTpwsGrid extends BlockExtension implements DirectionHelper {
 
+	/**
+	 * 碰撞箱 / 选取框：和模型完全一致的一块薄板。
+	 *
+	 * <p>模型（{@code models/block/tpws_grid.json}）占满整格 x/z，高度只从 0.75 到 1.75 像素，
+	 * 所以这里也用同样的六个坐标（单位是 1/16 格）。模型改了这里要跟着改。
+	 */
+	private static final VoxelShape SHAPE = Block.createCuboidShape(0.0D, 0.75D, 0.0D, 16.0D, 1.75D, 16.0D);
+
 	public BlockTpwsGrid(BlockSettings blockSettings) {
 		super(blockSettings);
 		setDefaultState2(withFacing(getDefaultState2(), Direction.NORTH));
@@ -50,6 +63,18 @@ public class BlockTpwsGrid extends BlockExtension implements DirectionHelper {
 	public BlockState getPlacementState2(ItemPlacementContext itemPlacementContext) {
 		// 和原版箱子/熔炉一致：正面朝向玩家
 		return withFacing(getDefaultState2(), itemPlacementContext.getPlayerFacing().getOpposite());
+	}
+
+	/** 鼠标指向时的黑框：贴合薄板，而不是整格立方体。 */
+	@Override
+	public VoxelShape getOutlineShape2(BlockState blockState, BlockView blockView, BlockPos blockPos, ShapeContext shapeContext) {
+		return SHAPE;
+	}
+
+	/** 实际碰撞：同样是这块薄板，所以可以站在上面、但不会有一格高的空气墙。 */
+	@Override
+	public VoxelShape getCollisionShape2(BlockState blockState, BlockView blockView, BlockPos blockPos, ShapeContext shapeContext) {
+		return SHAPE;
 	}
 
 	/**

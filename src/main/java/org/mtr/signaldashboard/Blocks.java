@@ -14,8 +14,9 @@ import org.mtr.signaldashboard.block.BlockTpwsGrid;
  * <ul>
  *     <li>{@link BlockHelper#createBlockSettings(boolean, boolean)} 的第二个参数传
  *         {@code true}（非不透明），否则薄片会被当成整格实体方块遮光；</li>
- *     <li>再叠一个 {@code noCollision()} —— 1 像素的薄片如果给整格碰撞，
- *         玩家走过去会被一格高的空气墙绊住。</li>
+ *     <li><b>不要</b>叠 {@code noCollision()} —— 那会把碰撞箱强行清空，
+ *         方块类里重写的 {@code getCollisionShape2} 就失效了。碰撞箱由
+ *         {@link BlockTpwsGrid} 自己返回一块和模型同尺寸的薄板。</li>
  * </ul>
  *
  * <p>和物品一样，这里用的也是<b>本模组自己的</b> {@link MTRSignalDashboard#REGISTRY}，
@@ -31,7 +32,7 @@ public final class Blocks {
 	/** TPWS 感应网格方块（含对应的方块物品）。 */
 	public static final BlockRegistryObject TPWS_GRID = MTRSignalDashboard.REGISTRY.registerBlockWithBlockItem(
 			MTRSignalDashboard.identifier("tpws_grid"),
-			() -> new Block(new BlockTpwsGrid(BlockHelper.createBlockSettings(true, true).strength(2.0F).noCollision())),
+			() -> new Block(new BlockTpwsGrid(BlockHelper.createBlockSettings(true, true).strength(2.0F))),
 			org.mtr.mod.CreativeModeTabs.CORE
 	);
 
