@@ -27,7 +27,7 @@ jobs:
       uses: gradle/actions/setup-gradle@v5
 
     - name: Build with Gradle Wrapper
-      run: ./gradlew build --stacktrace
+      run: chmod +x ./gradlew && ./gradlew build --stacktrace
       env:
         GRADLE_OPTS: "-Dorg.gradle.jvmargs=-Xmx4g"
 
