@@ -32,7 +32,7 @@ jobs:
         GRADLE_OPTS: "-Dorg.gradle.jvmargs=-Xmx4g"
 
     - name: Upload Build Artifacts
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v5
       with:
         name: mod-jars
         path: build/libs/*.jar
