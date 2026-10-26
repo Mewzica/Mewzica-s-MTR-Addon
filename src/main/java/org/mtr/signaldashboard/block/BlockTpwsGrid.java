@@ -44,10 +44,10 @@ public class BlockTpwsGrid extends BlockExtension implements DirectionHelper {
 	/**
 	 * 碰撞箱 / 选取框：和模型完全一致的一块薄板。
 	 *
-	 * <p>模型（{@code models/block/tpws_grid.json}）占满整格 x/z，高度只从 0.75 到 1.75 像素，
+	 * <p>模型（{@code models/block/tpws_grid.json}）占满整格 x/z，高度只从 1.25 到 2.25 像素，
 	 * 所以这里也用同样的六个坐标（单位是 1/16 格）。模型改了这里要跟着改。
 	 */
-	private static final VoxelShape SHAPE = Block.createCuboidShape(0.0D, 0.75D, 0.0D, 16.0D, 1.75D, 16.0D);
+	private static final VoxelShape SHAPE = Block.createCuboidShape(0.0D, 1.25D, 0.0D, 16.0D, 2.25D, 16.0D);
 
 	public BlockTpwsGrid(BlockSettings blockSettings) {
 		super(blockSettings);
