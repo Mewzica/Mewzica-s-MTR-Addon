@@ -98,16 +98,18 @@ This is a **Fabric-only** mod. It must be installed on both the client and the s
 
 - **JDK 17**
 - **Gradle 8.14** (or use the bundled wrapper)
-- The **MTR mod jar** (see below)
+- Internet access on the first build — the **MTR mod jar** is downloaded automatically (see below)
 
 ### The MTR dependency
 
-MTR is not pulled from a Maven repository, because this addon compiles against the **published release jar**. That jar is **not** committed to this repository (it is MTR's own artifact), so you must supply it yourself:
+MTR is not pulled from a Maven repository, because this addon compiles against the **published release jar**. That jar is **not** committed to this repository (it is MTR's own artifact, ~81 MB), so the build fetches it for you:
 
-1. Download `MTR-fabric-4.0.5+1.20.1.jar` from [Modrinth](https://modrinth.com/mod/minecraft-transit-railway/versions).
-2. Place it at `libs/MTR-fabric-4.0.5+1.20.1.jar`.
+- **First build downloads it automatically.** If `libs/MTR-fabric-4.0.5+1.20.1.jar` is missing, `build.gradle` downloads it from the Modrinth CDN and verifies its SHA-1 before compiling. The URL and hash live next to `mtrJar` in `gradle.properties`.
+- **Behind a proxy?** Gradle does not read the `http_proxy` environment variable. Put the proxy in `GRADLE_USER_HOME/gradle.properties` (outside this project, so it is never committed) as `systemProp.http.proxyHost` / `systemProp.http.proxyPort`, and the same two keys with `https`.
 
-If you use a different MTR version, update `mtrJar` in `gradle.properties` accordingly.
+- **Offline / manual:** download `MTR-fabric-4.0.5+1.20.1.jar` from [Modrinth](https://modrinth.com/mod/minecraft-transit-railway/versions), place it at `libs/MTR-fabric-4.0.5+1.20.1.jar`, then build with `./gradlew build -PskipMtrDownload`.
+
+If you use a different MTR version, update `mtrJar`, `mtrDownloadUrl` and `mtrSha1` in `gradle.properties` together.
 
 ### Build
 

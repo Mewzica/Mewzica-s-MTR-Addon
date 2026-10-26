@@ -9,6 +9,59 @@ base {
 	archivesName = "Mewzica-s-MTR-Addon-fabric"
 }
 
+// ---------------------------------------------------------------------------
+// 构建前置：MTR 发布 jar
+// ---------------------------------------------------------------------------
+// 仓库里不带 MTR 本体（约 81 MB，且是 MTR 自己的产物，见 README）。如果 libs/ 下
+// 没有这个 jar，构建会自动从 Modrinth CDN 下载一次并校验 SHA-1，之后一直用本地文件。
+//
+// - 离线构建：加 -PskipMtrDownload，然后自己把 jar 放进 libs/。
+// - 需要代理：把 systemProp.http(s).proxyHost / proxyPort 写进
+//   GRADLE_USER_HOME/gradle.properties（项目里的那份会被提交，不要写在那里）。
+def mtrJarFile = file(mtrJar)
+if (!mtrJarFile.exists() && !project.hasProperty("skipMtrDownload")) {
+	final String downloadUrl = mtrDownloadUrl
+	final String expectedSha1 = mtrSha1
+	logger.lifecycle("==> 缺少 MTR 依赖，正在下载：${downloadUrl}")
+	mtrJarFile.parentFile.mkdirs()
+	final File tempFile = new File(mtrJarFile.parentFile, mtrJarFile.name + ".part")
+	try {
+		final java.net.HttpURLConnection connection = (java.net.HttpURLConnection) new java.net.URI(downloadUrl).toURL().openConnection()
+		connection.setRequestProperty("User-Agent", "Mewzica-s-MTR-Addon-build")
+		connection.connectTimeout = 30000
+		connection.readTimeout = 120000
+		if (connection.responseCode != 200) {
+			throw new GradleException("HTTP ${connection.responseCode}")
+		}
+		connection.inputStream.withStream { input ->
+			tempFile.withOutputStream { output -> output << input }
+		}
+		final java.security.MessageDigest digest = java.security.MessageDigest.getInstance("SHA-1")
+		tempFile.withInputStream { input ->
+			final byte[] buffer = new byte[65536]
+			int read
+			while ((read = input.read(buffer)) > 0) {
+				digest.update(buffer, 0, read)
+			}
+		}
+		final String actualSha1 = digest.digest().encodeHex().toString()
+		if (expectedSha1 && !actualSha1.equalsIgnoreCase(expectedSha1)) {
+			throw new GradleException("SHA-1 校验失败：期望 ${expectedSha1}，实际 ${actualSha1}")
+		}
+		java.nio.file.Files.move(tempFile.toPath(), mtrJarFile.toPath(), java.nio.file.StandardCopyOption.REPLACE_EXISTING)
+		logger.lifecycle("==> MTR 依赖就绪：${mtrJarFile} (${Math.round(mtrJarFile.length() / 1048576.0D)} MB)")
+	} catch (Exception exception) {
+		tempFile.delete()
+		throw new GradleException("""下载 MTR 依赖失败：${exception.message}
+
+请任选其一：
+  1. 检查网络 / 代理（systemProp.http(s).proxyHost、proxyPort 写在 GRADLE_USER_HOME/gradle.properties）
+  2. 手动下载 ${downloadUrl}
+     保存为 ${mtrJarFile}（文件名必须完全一致）
+  3. 用 -PskipMtrDownload 跳过自动下载""", exception)
+	}
+}
+
 repositories {
 	flatDir { dirs "libs" }
 	maven { url = "https://maven.fabricmc.net/" }
