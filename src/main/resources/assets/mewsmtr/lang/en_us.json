@@ -107,5 +107,11 @@
 	"gui.mewsmtr.tpws.hint.overspeed": "Trains passing over this grid above the threshold are braked to a stop.",
 	"gui.mewsmtr.tpws.hint.signal": "Trains passing over this grid while the linked signal is red are braked to a stop.",
 	"gui.mewsmtr.tpws.line_hint": "Threshold = rail speed limit + margin",
-	"gui.mewsmtr.tpws.unit.kmh": "km/h"
+	"gui.mewsmtr.tpws.unit.kmh": "km/h",
+	"gui.mewsmtr.tpws.direction": "Direction",
+	"gui.mewsmtr.tpws.direction.both": "Both",
+	"gui.mewsmtr.tpws.direction.north": "North",
+	"gui.mewsmtr.tpws.direction.east": "East",
+	"gui.mewsmtr.tpws.direction.south": "South",
+	"gui.mewsmtr.tpws.direction.west": "West"
 }

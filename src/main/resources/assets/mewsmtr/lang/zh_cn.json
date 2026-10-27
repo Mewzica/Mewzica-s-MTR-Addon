@@ -107,5 +107,11 @@
 	"gui.mewsmtr.tpws.hint.overspeed": "列车经过线圈时若超过阈值，立即紧急制动。",
 	"gui.mewsmtr.tpws.hint.signal": "绑定的信号机为红灯时，列车压上线圈即紧急制动。",
 	"gui.mewsmtr.tpws.line_hint": "阈值 = 轨道限速 + 余量",
-	"gui.mewsmtr.tpws.unit.kmh": "km/h"
+	"gui.mewsmtr.tpws.unit.kmh": "km/h",
+	"gui.mewsmtr.tpws.direction": "方向",
+	"gui.mewsmtr.tpws.direction.both": "双向",
+	"gui.mewsmtr.tpws.direction.north": "北",
+	"gui.mewsmtr.tpws.direction.east": "东",
+	"gui.mewsmtr.tpws.direction.south": "南",
+	"gui.mewsmtr.tpws.direction.west": "西"
 }

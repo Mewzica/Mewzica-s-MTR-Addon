@@ -76,6 +76,14 @@ public final class TpwsProtection {
 	private static final Map<Long, Long> LAST_START_SOUND = new ConcurrentHashMap<>();
 	private static final Map<Long, Long> LAST_ALARM_SOUND = new ConcurrentHashMap<>();
 
+	/**
+	 * 每辆车上一 tick 的车头位置，用来算行进方向。
+	 *
+	 * <p>判定「触发方向」只需要一段<b>水平位移</b>，不需要知道列车挂在哪条轨道上 ——
+	 * 模拟线程本来也读不到轨道数据。列车每 tick 只走几厘米，用相邻两帧的位置差足够。
+	 */
+	private static final Map<Long, Vector> LAST_HEAD = new ConcurrentHashMap<>();
+
 	private TpwsProtection() {
 	}
 
@@ -116,8 +124,19 @@ public final class TpwsProtection {
 		final boolean justEntered = !Long.valueOf(coil.blockPos()).equals(CURRENT_COIL.put(stateKey, coil.blockPos()));
 		final TpwsCoilConfig config = coil.config();
 
+		// 行进方向：用相邻两帧的车头位置差，投影到配置的触发方向上
+		final Vector previousHead = LAST_HEAD.put(stateKey, head);
+		final double deltaX = previousHead == null ? 0.0D : head.x - previousHead.x;
+		final double deltaZ = previousHead == null ? 0.0D : head.z - previousHead.z;
+
 		if (justEntered && clientSide) {
 			playSound(stateKey, head, Sounds.TPWS_START, LAST_START_SOUND, 0.6F);
+		}
+
+		if (!directionMatches(config, deltaX, deltaZ)) {
+			// 方向不符：这枚线圈对本次通过不作动作，但「已在线圈上」的状态已经记下了，
+			// 所以列车掉头回来时不会因为状态错乱而漏判
+			return Outcome.ARMED;
 		}
 
 		final Outcome outcome = config.isSignalMode()
@@ -153,6 +172,30 @@ public final class TpwsProtection {
 	 */
 	private static long stateKey(long vehicleId, boolean clientSide) {
 		return vehicleId << 1 | (clientSide ? 1L : 0L);
+	}
+
+	/**
+	 * 方向判定：配置为双向时一律放行，否则看列车是不是正朝那个方向行驶。
+	 *
+	 * <p>静止时（位移为 0，比如列车正停在线圈上）判不出方向，<b>放行</b> ——
+	 * 宁可漏拦一次，也不要把停着的车再拽一下。
+	 */
+	private static boolean directionMatches(TpwsCoilConfig config, double deltaX, double deltaZ) {
+		final int direction = config.getDirection();
+		if (direction == TpwsCoilConfig.DIRECTION_BOTH) {
+			return true;
+		}
+		if (deltaX == 0.0D && deltaZ == 0.0D) {
+			return true;
+		}
+		final double projection = switch (direction) {
+			case TpwsCoilConfig.DIRECTION_NORTH -> -deltaZ;
+			case TpwsCoilConfig.DIRECTION_EAST -> deltaX;
+			case TpwsCoilConfig.DIRECTION_SOUTH -> deltaZ;
+			case TpwsCoilConfig.DIRECTION_WEST -> -deltaX;
+			default -> 0.0D;
+		};
+		return projection > 0.0D;
 	}
 
 	/** 超速模式：边沿触发 + 3 秒保持。 */

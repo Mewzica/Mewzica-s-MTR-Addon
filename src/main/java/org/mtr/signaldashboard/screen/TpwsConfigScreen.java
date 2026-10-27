@@ -54,7 +54,7 @@ public class TpwsConfigScreen extends ScreenExtension implements IGui {
 	/** 面板宽度：和原版箱子界面一致。 */
 	private static final int PANEL_WIDTH = 176;
 
-	private static final int PANEL_HEIGHT = 190;
+	private static final int PANEL_HEIGHT = 206;
 
 	/** 原版按钮的标准高度。 */
 	private static final int BUTTON_HEIGHT = 20;
@@ -166,12 +166,20 @@ public class TpwsConfigScreen extends ScreenExtension implements IGui {
 				() -> config.isSignalMode() && config.hasSignal(),
 				() -> sendToServer(PacketTpwsConfig.ACTION_UNLINK));
 
+		// ---- 触发方向（两种模式共用）----
+		addButton(px + 48, py + 134, 80,
+				() -> Lang.gui(directionKey(config.getDirection())),
+				() -> true, () -> {
+					config.cycleDirection();
+					refreshSlots();
+				});
+
 		// ---- 底部 ----
-		addButton(px + 29, py + 160, 56, () -> Lang.gui("tpws.done"), () -> true, () -> {
+		addButton(px + 29, py + 176, 56, () -> Lang.gui("tpws.done"), () -> true, () -> {
 			sendToServer(PacketTpwsConfig.ACTION_SAVE);
 			onClose2();
 		});
-		addButton(px + 91, py + 160, 56, () -> Lang.gui("tpws.cancel"), () -> true, this::onClose2);
+		addButton(px + 91, py + 176, 56, () -> Lang.gui("tpws.cancel"), () -> true, this::onClose2);
 
 		refreshSlots();
 	}
@@ -237,6 +245,23 @@ public class TpwsConfigScreen extends ScreenExtension implements IGui {
 		return (current == value ? "> " : "") + Lang.gui(key);
 	}
 
+	/**
+	 * 方向值 → 语言键。
+	 *
+	 * <p>用<b>绝对世界方向</b>而不是「正向 / 反向」：映射层的 {@code BlockState.get}
+	 * 返回的是 vanilla 枚举、不做 holder 包装，从方块实体里读朝向要多绕一层；
+	 * 而绝对方向对玩家也更直观 —— 线圈可以横跨轨道，触发方向本来就不必等于模型朝向。
+	 */
+	private static String directionKey(int direction) {
+		return switch (direction) {
+			case TpwsCoilConfig.DIRECTION_NORTH -> "tpws.direction.north";
+			case TpwsCoilConfig.DIRECTION_EAST -> "tpws.direction.east";
+			case TpwsCoilConfig.DIRECTION_SOUTH -> "tpws.direction.south";
+			case TpwsCoilConfig.DIRECTION_WEST -> "tpws.direction.west";
+			default -> "tpws.direction.both";
+		};
+	}
+
 	private void setMode(int mode) {
 		config.setMode(mode);
 		refreshSlots();
@@ -290,9 +315,11 @@ public class TpwsConfigScreen extends ScreenExtension implements IGui {
 			drawOverspeedSection(graphicsHolder, px, py);
 		}
 
+		label(graphicsHolder, Lang.gui("tpws.direction"), px + LABEL_X, py + 140, ARGB_TEXT);
+
 		graphicsHolder.drawCenteredText(
 				Lang.gui(config.isSignalMode() ? "tpws.hint.signal" : "tpws.hint.overspeed"),
-				px + PANEL_WIDTH / 2, py + 142, ARGB_DIM
+				px + PANEL_WIDTH / 2, py + 158, ARGB_DIM
 		);
 
 		// 原版按钮由 Screen 的 children 机制绘制，必须放在面板之后

@@ -53,6 +53,20 @@ public final class TpwsCoilConfig {
 	/** 阈值 = 线路限速 + 余量。 */
 	public static final int SPEED_LINE = 1;
 
+	/** 双向触发（默认）。 */
+	public static final int DIRECTION_BOTH = 0;
+	/** 只拦「朝北（-Z）行驶」的列车。 */
+	public static final int DIRECTION_NORTH = 1;
+	/** 只拦「朝东（+X）行驶」的列车。 */
+	public static final int DIRECTION_EAST = 2;
+	/** 只拦「朝南（+Z）行驶」的列车。 */
+	public static final int DIRECTION_SOUTH = 3;
+	/** 只拦「朝西（-X）行驶」的列车。 */
+	public static final int DIRECTION_WEST = 4;
+
+	/** 方向的可选值个数（{@link #DIRECTION_BOTH} + 四个水平朝向）。 */
+	public static final int DIRECTION_COUNT = 5;
+
 	/** 未绑定信号机时 {@link #getSignalPos()} 的取值。 */
 	public static final long NO_SIGNAL = 0L;
 
@@ -80,32 +94,50 @@ public final class TpwsCoilConfig {
 	private static final String KEY_MARGIN = "Margin";
 	private static final String KEY_SIGNAL_POS = "SignalPos";
 	private static final String KEY_SIGNAL_COLOR = "SignalColor";
+	private static final String KEY_DIRECTION = "Direction";
 
 	private volatile int mode;
 	private volatile int speedMode;
 	private volatile int speedLimitKmh;
 	private volatile int marginKmh;
+	/**
+	 * 触发方向：{@link #DIRECTION_BOTH} 或四个水平朝向之一。
+	 *
+	 * <p>现实里的 TPWS 是<b>单向</b>的 —— 只有按行车方向驶来的列车才需要被拦。
+	 * 双向触发在单线区段上会把反向正常运行的列车也拽停，所以这个开关是必要的。
+	 *
+	 * <p>存的是<b>绝对世界方向</b>而不是「相对方块朝向」，因为映射层的
+	 * {@code BlockState.get} 返回的是 vanilla 枚举、不做 holder 包装，
+	 * 从方块实体里读朝向要多绕一层；而绝对方向对玩家来说也更直观
+	 * （线圈可以横跨轨道，触发方向本来就不必等于模型朝向）。
+	 */
+	private volatile int direction;
 	/** 绑定的信号机方块坐标（{@link BlockPos#asLong()} 编码），{@link #NO_SIGNAL} 表示未绑定。 */
 	private volatile long signalPos;
 	/** 绑定的信号颜色（24 位 RGB），{@link #NO_COLOR} 表示未确定。 */
 	private volatile int signalColor;
 
 	public TpwsCoilConfig() {
-		this(MODE_OVERSPEED, SPEED_FIXED, DEFAULT_SPEED_KMH, DEFAULT_MARGIN_KMH, NO_SIGNAL, NO_COLOR);
+		this(MODE_OVERSPEED, SPEED_FIXED, DEFAULT_SPEED_KMH, DEFAULT_MARGIN_KMH, NO_SIGNAL, NO_COLOR, DIRECTION_BOTH);
 	}
 
 	public TpwsCoilConfig(int mode, int speedMode, int speedLimitKmh, int marginKmh, long signalPos, int signalColor) {
+		this(mode, speedMode, speedLimitKmh, marginKmh, signalPos, signalColor, DIRECTION_BOTH);
+	}
+
+	public TpwsCoilConfig(int mode, int speedMode, int speedLimitKmh, int marginKmh, long signalPos, int signalColor, int direction) {
 		this.mode = mode == MODE_SIGNAL ? MODE_SIGNAL : MODE_OVERSPEED;
 		this.speedMode = speedMode == SPEED_LINE ? SPEED_LINE : SPEED_FIXED;
 		this.speedLimitKmh = clamp(speedLimitKmh, MIN_SPEED_KMH, MAX_SPEED_KMH);
 		this.marginKmh = clamp(marginKmh, MIN_MARGIN_KMH, MAX_MARGIN_KMH);
 		this.signalPos = signalPos;
 		this.signalColor = signalColor;
+		this.direction = normalizeDirection(direction);
 	}
 
 	/** 深拷贝 —— 发给客户端编辑的那一份必须是副本，否则玩家点「取消」也会改到服务端数据。 */
 	public TpwsCoilConfig copy() {
-		return new TpwsCoilConfig(mode, speedMode, speedLimitKmh, marginKmh, signalPos, signalColor);
+		return new TpwsCoilConfig(mode, speedMode, speedLimitKmh, marginKmh, signalPos, signalColor, direction);
 	}
 
 	// ------------------------------------------------------------------
@@ -188,6 +220,28 @@ public final class TpwsCoilConfig {
 		return signalColor != NO_COLOR;
 	}
 
+	public int getDirection() {
+		return direction;
+	}
+
+	public void setDirection(int direction) {
+		this.direction = normalizeDirection(direction);
+	}
+
+	public boolean isDirectionBoth() {
+		return direction == DIRECTION_BOTH;
+	}
+
+	/** 循环切到下一个方向（双向 → 北 → 东 → 南 → 西 → 双向）。 */
+	public void cycleDirection() {
+		this.direction = (direction + 1) % DIRECTION_COUNT;
+	}
+
+	/** 把越界的值收回到 {@link #DIRECTION_BOTH}，避免存档里出现野值。 */
+	private static int normalizeDirection(int direction) {
+		return direction >= DIRECTION_BOTH && direction < DIRECTION_COUNT ? direction : DIRECTION_BOTH;
+	}
+
 	// ------------------------------------------------------------------
 	// 序列化
 	// ------------------------------------------------------------------
@@ -200,6 +254,7 @@ public final class TpwsCoilConfig {
 		tag.putInt(KEY_MARGIN, marginKmh);
 		tag.putLong(KEY_SIGNAL_POS, signalPos);
 		tag.putInt(KEY_SIGNAL_COLOR, signalColor);
+		tag.putInt(KEY_DIRECTION, direction);
 	}
 
 	/** 从方块实体 NBT 读取。缺字段时保留当前值，兼容旧存档。 */
@@ -222,6 +277,9 @@ public final class TpwsCoilConfig {
 		if (tag.contains(KEY_SIGNAL_COLOR)) {
 			signalColor = tag.getInt(KEY_SIGNAL_COLOR);
 		}
+		if (tag.contains(KEY_DIRECTION)) {
+			setDirection(tag.getInt(KEY_DIRECTION));
+		}
 	}
 
 	public void write(PacketBufferSender sender) {
@@ -231,6 +289,7 @@ public final class TpwsCoilConfig {
 		sender.writeInt(marginKmh);
 		sender.writeLong(signalPos);
 		sender.writeInt(signalColor);
+		sender.writeInt(direction);
 	}
 
 	public static TpwsCoilConfig read(PacketBufferReceiver receiver) {
@@ -240,6 +299,7 @@ public final class TpwsCoilConfig {
 				receiver.readInt(),
 				receiver.readInt(),
 				receiver.readLong(),
+				receiver.readInt(),
 				receiver.readInt()
 		);
 	}
@@ -255,6 +315,7 @@ public final class TpwsCoilConfig {
 				+ ", speedLimit=" + speedLimitKmh
 				+ ", margin=" + marginKmh
 				+ ", signalPos=" + signalPos
-				+ ", signalColor=" + Integer.toHexString(signalColor) + '}';
+				+ ", signalColor=" + Integer.toHexString(signalColor)
+				+ ", direction=" + direction + '}';
 	}
 }

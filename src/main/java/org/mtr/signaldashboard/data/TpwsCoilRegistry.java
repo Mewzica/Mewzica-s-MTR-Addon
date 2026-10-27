@@ -39,8 +39,8 @@ import java.util.concurrent.ConcurrentHashMap;
  */
 public final class TpwsCoilRegistry {
 
-	/** 维度 → （方块坐标 → 配置）。外层与内层都是并发容器，见类注释的线程说明。 */
-	private static final Map<String, Map<Long, TpwsCoilConfig>> BY_DIMENSION = new ConcurrentHashMap<>();
+	/** 维度 → （方块坐标 → 线圈）。外层与内层都是并发容器，见类注释的线程说明。 */
+	private static final Map<String, Map<Long, Coil>> BY_DIMENSION = new ConcurrentHashMap<>();
 
 	private TpwsCoilRegistry() {
 	}
@@ -61,12 +61,13 @@ public final class TpwsCoilRegistry {
 
 	/** 登记（或覆盖）一枚线圈。重复调用是幂等的。 */
 	public static void put(String dimension, long blockPos, TpwsCoilConfig config) {
-		BY_DIMENSION.computeIfAbsent(canonicalDimension(dimension), key -> new ConcurrentHashMap<>()).put(blockPos, config);
+		BY_DIMENSION.computeIfAbsent(canonicalDimension(dimension), key -> new ConcurrentHashMap<>())
+				.put(blockPos, new Coil(blockPos, config));
 	}
 
 	/** 注销一枚线圈。 */
 	public static void remove(String dimension, long blockPos) {
-		final Map<Long, TpwsCoilConfig> coils = BY_DIMENSION.get(canonicalDimension(dimension));
+		final Map<Long, Coil> coils = BY_DIMENSION.get(canonicalDimension(dimension));
 		if (coils != null) {
 			coils.remove(blockPos);
 		}
@@ -74,7 +75,7 @@ public final class TpwsCoilRegistry {
 
 	/** 该维度登记了多少枚线圈（调试用）。 */
 	public static int size(String dimension) {
-		final Map<Long, TpwsCoilConfig> coils = BY_DIMENSION.get(canonicalDimension(dimension));
+		final Map<Long, Coil> coils = BY_DIMENSION.get(canonicalDimension(dimension));
 		return coils == null ? 0 : coils.size();
 	}
 
@@ -94,30 +95,28 @@ public final class TpwsCoilRegistry {
 	 * @return 最近的线圈；半径内没有线圈时返回 {@code null}
 	 */
 	public static Coil findNear(String dimension, double x, double y, double z, double radius) {
-		final Map<Long, TpwsCoilConfig> coils = BY_DIMENSION.get(canonicalDimension(dimension));
+		final Map<Long, Coil> coils = BY_DIMENSION.get(canonicalDimension(dimension));
 		if (coils == null || coils.isEmpty()) {
 			return null;
 		}
 
 		final double radiusSquared = radius * radius;
 		double bestDistanceSquared = radiusSquared;
-		long bestKey = 0L;
-		TpwsCoilConfig bestConfig = null;
+		Coil best = null;
 
-		for (final Map.Entry<Long, TpwsCoilConfig> entry : coils.entrySet()) {
-			final BlockPos pos = BlockPos.fromLong(entry.getKey());
+		for (final Coil coil : coils.values()) {
+			final BlockPos pos = BlockPos.fromLong(coil.blockPos());
 			final double dx = pos.getX() + 0.5D - x;
 			final double dy = pos.getY() + 0.5D - y;
 			final double dz = pos.getZ() + 0.5D - z;
 			final double distanceSquared = dx * dx + dy * dy + dz * dz;
 			if (distanceSquared <= bestDistanceSquared) {
 				bestDistanceSquared = distanceSquared;
-				bestKey = entry.getKey();
-				bestConfig = entry.getValue();
+				best = coil;
 			}
 		}
 
-		return bestConfig == null ? null : new Coil(bestKey, bestConfig);
+		return best;
 	}
 
 	/**

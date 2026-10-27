@@ -107,5 +107,11 @@
 	"gui.mewsmtr.tpws.hint.overspeed": "列車經過線圈時若超過閾值，立即緊急制動。",
 	"gui.mewsmtr.tpws.hint.signal": "綁定的訊號機為紅燈時，列車壓上線圈即緊急制動。",
 	"gui.mewsmtr.tpws.line_hint": "閾值 = 軌道限速 + 餘量",
-	"gui.mewsmtr.tpws.unit.kmh": "km/h"
+	"gui.mewsmtr.tpws.unit.kmh": "km/h",
+	"gui.mewsmtr.tpws.direction": "方向",
+	"gui.mewsmtr.tpws.direction.both": "雙向",
+	"gui.mewsmtr.tpws.direction.north": "北",
+	"gui.mewsmtr.tpws.direction.east": "東",
+	"gui.mewsmtr.tpws.direction.south": "南",
+	"gui.mewsmtr.tpws.direction.west": "西"
 }
