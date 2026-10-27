@@ -56,6 +56,7 @@ public class BlockEntityTpwsGrid extends BlockEntityExtension {
 		config.setSpeedMode(source.getSpeedMode());
 		config.setSpeedLimitKmh(source.getSpeedLimitKmh());
 		config.setMarginKmh(source.getMarginKmh());
+		config.setDirection(source.getDirection());
 		if (source.hasSignal()) {
 			config.setSignal(source.getSignalPos(), source.getSignalColor());
 		} else {

@@ -9,7 +9,8 @@
 		"VehicleMixin"
 	],
 	"client": [
-		"DrivingGuiRendererMixin"
+		"DrivingGuiRendererMixin",
+		"SignalBlockEntityMixin"
 	],
 	"injectors": {
 		"defaultRequire": 1

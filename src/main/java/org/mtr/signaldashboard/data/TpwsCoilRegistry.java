@@ -42,6 +42,14 @@ public final class TpwsCoilRegistry {
 	/** 维度 → （方块坐标 → 线圈）。外层与内层都是并发容器，见类注释的线程说明。 */
 	private static final Map<String, Map<Long, Coil>> BY_DIMENSION = new ConcurrentHashMap<>();
 
+	/**
+	 * 「信号机坐标 → 接管它的线圈」的反查表，{@code null} 表示需要重建。
+	 *
+	 * <p>反查在客户端<b>每帧、每个信号机</b>都会调一次（决定亮红灯还是绿灯），
+	 * 直接遍历全部线圈太浪费，所以摊平成一张表；线圈增删时置空重建。
+	 */
+	private static volatile Map<Long, Coil> bySignalCache;
+
 	private TpwsCoilRegistry() {
 	}
 
@@ -63,6 +71,7 @@ public final class TpwsCoilRegistry {
 	public static void put(String dimension, long blockPos, TpwsCoilConfig config) {
 		BY_DIMENSION.computeIfAbsent(canonicalDimension(dimension), key -> new ConcurrentHashMap<>())
 				.put(blockPos, new Coil(blockPos, config));
+		bySignalCache = null;
 	}
 
 	/** 注销一枚线圈。 */
@@ -70,6 +79,7 @@ public final class TpwsCoilRegistry {
 		final Map<Long, Coil> coils = BY_DIMENSION.get(canonicalDimension(dimension));
 		if (coils != null) {
 			coils.remove(blockPos);
+			bySignalCache = null;
 		}
 	}
 
@@ -77,6 +87,37 @@ public final class TpwsCoilRegistry {
 	public static int size(String dimension) {
 		final Map<Long, Coil> coils = BY_DIMENSION.get(canonicalDimension(dimension));
 		return coils == null ? 0 : coils.size();
+	}
+
+	/**
+	 * 反查：哪个线圈把 {@code signalPos} 这个信号机当成了联锁对象。
+	 *
+	 * <p>客户端渲染信号机时要问这个问题 —— 被 TPWS 接管的信号机，
+	 * 亮灭改由本模组决定，不再走 MTR 的「闭塞空闲就灭灯」。
+	 *
+	 * <p>没有按维度过滤：线圈总数通常是个位数到几十，而这里只拿到一个方块坐标、
+	 * 拿不到维度串。跨维度同坐标的极端情况下最多多扫几个表，不影响正确性。
+	 */
+	public static Coil findBySignal(long signalPos) {
+		Map<Long, Coil> cache = bySignalCache;
+		if (cache == null) {
+			cache = buildSignalCache();
+			bySignalCache = cache;
+		}
+		return cache.get(signalPos);
+	}
+
+	private static Map<Long, Coil> buildSignalCache() {
+		final Map<Long, Coil> cache = new java.util.HashMap<>();
+		for (final Map<Long, Coil> coils : BY_DIMENSION.values()) {
+			for (final Coil coil : coils.values()) {
+				final TpwsCoilConfig config = coil.config();
+				if (config.isSignalMode() && config.hasSignal()) {
+					cache.put(config.getSignalPos(), coil);
+				}
+			}
+		}
+		return cache;
 	}
 
 	/**

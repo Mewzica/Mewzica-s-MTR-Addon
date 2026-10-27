@@ -34,6 +34,8 @@ A **TPWS grid** block (the "coil") — a thin plate that sits on the track bed b
 - **Linking** — either press `Auto detect` in the screen (finds the nearest MTR signal within 8 blocks and reads its colour), or use the **TPWS Linker** item: right-click a signal, then right-click the grid.
 - **Two different trigger semantics**, deliberately: overspeed is *edge triggered* (brake once on entry, hold for 3 s, then release) so a low threshold can't permanently trap a train; signal linking is *level triggered* (braked for as long as the signal is red and the train is on the grid).
 - **Applies to every train**, autonomous or manually driven.
+- **Trigger direction** — a coil can fire in both directions (default) or only for trains running north / east / south / west. Real TPWS loops are directional; firing both ways drags down trains legitimately running the other way on a single-track section.
+- **Signals taken over** — once a signal is linked to a coil, the coil decides what it shows instead of MTR: **red while a train is on the coil, green otherwise**. MTR's own behaviour is the opposite of what you'd expect here — its signals are *dark* when the block section is clear and only light up while it is occupied, and only if the signal has been given a colour in its own configuration screen. Linking a coil to an unconfigured signal is why the lamp appears to do nothing.
 - **Sounds** — a start-up tone when a train enters a coil's zone, plus dedicated overspeed and SPAD alarms.
 
 > ⚠️ The coil index is built from block entities as their chunks load. A train passing a grid in a chunk that has **never** been loaded since the server started will not be protected there. In practice this only matters on a large server with trains running far from any player.
