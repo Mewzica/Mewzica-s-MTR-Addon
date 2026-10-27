@@ -39,17 +39,26 @@ public final class TpwsSignalFinder {
 	/**
 	 * 在 {@code center} 周围搜索最近的 MTR 信号机。
 	 *
+	 * <p>挑选规则是<b>先看有没有颜色，再看距离</b>：MTR 的信号机只有在自己的
+	 * 配置界面里选过颜色之后才会亮，没颜色的信号机 {@code signalColors} 是空集，
+	 * 灯永远不亮、TPWS 也永远判不出红灯。如果只按距离挑，旁边正好有一台没配置的
+	 * 信号机就会把真正能用的那台挤掉，玩家看到的现象就是「连上了但灯不亮」。
+	 *
 	 * @return 找到的信号机；半径内没有则返回 {@code null}
 	 */
 	public static Found findNearest(World world, BlockPos center) {
 		Found best = null;
 		int bestDistanceSquared = Integer.MAX_VALUE;
+		boolean bestHasColor = false;
 
 		for (int dx = -SEARCH_RADIUS; dx <= SEARCH_RADIUS; dx++) {
 			for (int dy = -SEARCH_RADIUS; dy <= SEARCH_RADIUS; dy++) {
 				for (int dz = -SEARCH_RADIUS; dz <= SEARCH_RADIUS; dz++) {
 					final int distanceSquared = dx * dx + dy * dy + dz * dz;
-					if (distanceSquared >= bestDistanceSquared) {
+
+					// 已经有带颜色的候选时，无颜色的直接跳过；同类之间才比距离
+					final boolean canBeatByDistance = distanceSquared < bestDistanceSquared;
+					if (!canBeatByDistance) {
 						continue;
 					}
 
@@ -59,13 +68,31 @@ public final class TpwsSignalFinder {
 						continue;
 					}
 
+					final int color = readColor(signalEntity);
+					final boolean hasColor = color != TpwsCoilConfig.NO_COLOR;
+					if (bestHasColor && !hasColor) {
+						continue;
+					}
+
 					bestDistanceSquared = distanceSquared;
-					best = new Found(key, firstColor(signalEntity.getSignalColors(false)));
+					bestHasColor = hasColor;
+					best = new Found(key, color);
 				}
 			}
 		}
 
 		return best;
+	}
+
+	/**
+	 * 读信号机的颜色，正反两面都看。
+	 *
+	 * <p>双面信号机的前后两面可以配不同的颜色（{@code setData} 的最后一个参数就是
+	 * {@code isBackSide}），只读正面会漏掉配在背面的那一半。
+	 */
+	private static int readColor(BlockSignalBase.BlockEntityBase signalEntity) {
+		final int front = firstColor(signalEntity.getSignalColors(false));
+		return front != TpwsCoilConfig.NO_COLOR ? front : firstColor(signalEntity.getSignalColors(true));
 	}
 
 	/** 取信号机的第一个颜色；没有颜色（未连接信号）时返回 {@link TpwsCoilConfig#NO_COLOR}。 */

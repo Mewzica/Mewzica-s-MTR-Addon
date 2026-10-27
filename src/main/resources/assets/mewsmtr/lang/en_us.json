@@ -99,6 +99,7 @@
 	"gui.mewsmtr.tpws.signal.none": "Not linked",
 	"gui.mewsmtr.tpws.signal.linked": "Linked at %s, %s, %s",
 	"gui.mewsmtr.tpws.signal.color": "Colour #%s",
+	"gui.mewsmtr.tpws.signal.no_color": "No colour set - signal stays dark",
 	"gui.mewsmtr.tpws.auto_link": "Auto detect",
 	"gui.mewsmtr.tpws.unlink": "Unlink",
 	"gui.mewsmtr.tpws.done": "Done",
