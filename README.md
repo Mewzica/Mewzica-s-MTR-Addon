@@ -21,9 +21,22 @@ An item that opens a top-down view of the rails around you.
 - **Navigation** — scroll to zoom, middle-drag to pan, `Reset view` to fit the bounding box of the rails.
 - **Terrain toggle** — turn the backdrop off to free up VRAM on low-end machines.
 
-### Trackside props
+### TPWS protection
 
-A **TPWS grid** block — a thin decorative plate that sits on the track bed between the rails, modelled in Blockbench. It is non-opaque and has no collision, so it reads as a track component rather than a full block.
+A **TPWS grid** block (the "coil") — a thin plate that sits on the track bed between the rails, modelled in Blockbench. Unlike a pure decoration it is a **working train protection system**, modelled on the UK's TPWS:
+
+| Mode | Behaviour |
+| --- | --- |
+| **Overspeed** (TPWS *OSS* loop) | A train passing over the grid faster than the threshold is braked to a standstill. The threshold is either a **fixed km/h value**, or the **rail's own speed limit plus a margin**. |
+| **Signal** (TPWS *Arming + Trigger* loops) | The grid is linked to a nearby signal. If that signal's block section is occupied (red), a train passing over the grid is braked to a standstill — **the decision point moves from the signal node to the coil**. |
+
+- **Configure it with MTR's brush** — right-click the grid while holding the brush to open the configuration screen. No new tool to learn.
+- **Linking** — either press `Auto detect` in the screen (finds the nearest MTR signal within 8 blocks and reads its colour), or use the **TPWS Linker** item: right-click a signal, then right-click the grid.
+- **Two different trigger semantics**, deliberately: overspeed is *edge triggered* (brake once on entry, hold for 3 s, then release) so a low threshold can't permanently trap a train; signal linking is *level triggered* (braked for as long as the signal is red and the train is on the grid).
+- **Applies to every train**, autonomous or manually driven.
+- **Sounds** — a start-up tone when a train enters a coil's zone, plus dedicated overspeed and SPAD alarms.
+
+> ⚠️ The coil index is built from block entities as their chunks load. A train passing a grid in a chunk that has **never** been loaded since the server started will not be protected there. In practice this only matters on a large server with trains running far from any player.
 
 ### Manual driving
 

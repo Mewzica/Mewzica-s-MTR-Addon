@@ -3,6 +3,16 @@
 	"itemGroup.mewsmtr.main": "MTR 訊號調度板",
 
 	"block.mewsmtr.tpws_grid": "TPWS 線圈",
+	"item.mewsmtr.tpws_linker": "TPWS 連接器",
+
+	"subtitles.mewsmtr.tpws_start": "TPWS 起動",
+	"subtitles.mewsmtr.tpws_overspeed": "TPWS 超速警報",
+	"subtitles.mewsmtr.tpws_spad": "TPWS 闖紅燈警報",
+
+	"message.mewsmtr.tpws.link.selected": "已選中訊號機 (%s, %s, %s)，右鍵 TPWS 線圈完成連接",
+	"message.mewsmtr.tpws.link.not_signal": "請先用連接器右鍵一個 MTR 訊號機",
+	"message.mewsmtr.tpws.link.no_selection": "尚未選中訊號機，請先右鍵一個訊號機",
+	"message.mewsmtr.tpws.link.done": "已連接到 (%s, %s, %s) 的訊號機",
 
 	"category.mewsmtr.keybinding": "Mewzica's MTR Addon",
 	"key.mewsmtr.reverser_forward": "反相器：推向前進位（手動駕駛）",
@@ -73,5 +83,28 @@
 	"gui.mewsmtr.status.sent_connect": "已傳送連接請求 (%s)",
 	"gui.mewsmtr.status.sent_disconnect": "已傳送斷開請求 (%s)",
 	"gui.mewsmtr.status.terrain_on": "地形底圖已開啟",
-	"gui.mewsmtr.status.terrain_off": "地形底圖已關閉"
+	"gui.mewsmtr.status.terrain_off": "地形底圖已關閉",
+
+	"gui.mewsmtr.tpws.title": "TPWS 線圈設定",
+	"gui.mewsmtr.tpws.coord": "座標 %s, %s, %s",
+	"gui.mewsmtr.tpws.mode": "模式",
+	"gui.mewsmtr.tpws.mode.overspeed": "超速防護",
+	"gui.mewsmtr.tpws.mode.signal": "訊號聯鎖",
+	"gui.mewsmtr.tpws.threshold": "閾值來源",
+	"gui.mewsmtr.tpws.threshold.fixed": "固定值",
+	"gui.mewsmtr.tpws.threshold.line": "路線限速+餘量",
+	"gui.mewsmtr.tpws.speed_limit": "限速閾值",
+	"gui.mewsmtr.tpws.margin": "餘量",
+	"gui.mewsmtr.tpws.signal": "綁定訊號機",
+	"gui.mewsmtr.tpws.signal.none": "未連接",
+	"gui.mewsmtr.tpws.signal.linked": "已連接 %s, %s, %s",
+	"gui.mewsmtr.tpws.signal.color": "顏色 #%s",
+	"gui.mewsmtr.tpws.auto_link": "自動偵測",
+	"gui.mewsmtr.tpws.unlink": "斷開",
+	"gui.mewsmtr.tpws.done": "完成",
+	"gui.mewsmtr.tpws.cancel": "取消",
+	"gui.mewsmtr.tpws.hint.overspeed": "列車經過線圈時若超過閾值，立即緊急制動。",
+	"gui.mewsmtr.tpws.hint.signal": "綁定的訊號機為紅燈時，列車壓上線圈即緊急制動。",
+	"gui.mewsmtr.tpws.line_hint": "閾值 = 軌道限速 + 餘量",
+	"gui.mewsmtr.tpws.unit.kmh": "km/h"
 }

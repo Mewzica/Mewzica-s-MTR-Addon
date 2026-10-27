@@ -1,0 +1,32 @@
+{
+	"tpws_start": {
+		"subtitle": "subtitles.mewsmtr.tpws_start",
+		"sounds": [
+			{
+				"name": "mewsmtr:tpws_start",
+				"stream": false,
+				"attenuation_distance": 48
+			}
+		]
+	},
+	"tpws_overspeed": {
+		"subtitle": "subtitles.mewsmtr.tpws_overspeed",
+		"sounds": [
+			{
+				"name": "mewsmtr:tpws_overspeed",
+				"stream": false,
+				"attenuation_distance": 48
+			}
+		]
+	},
+	"tpws_spad": {
+		"subtitle": "subtitles.mewsmtr.tpws_spad",
+		"sounds": [
+			{
+				"name": "mewsmtr:tpws_spad",
+				"stream": false,
+				"attenuation_distance": 48
+			}
+		]
+	}
+}

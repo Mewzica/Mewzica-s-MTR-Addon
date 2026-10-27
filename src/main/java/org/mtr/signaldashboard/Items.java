@@ -3,6 +3,7 @@ package org.mtr.signaldashboard;
 import org.mtr.mapping.holder.Item;
 import org.mtr.mapping.registry.ItemRegistryObject;
 import org.mtr.signaldashboard.item.ItemSignalDashboard;
+import org.mtr.signaldashboard.item.ItemTpwsLinker;
 
 /**
  * 物品注册。
@@ -28,11 +29,23 @@ public final class Items {
 			org.mtr.mod.CreativeModeTabs.CORE
 	);
 
+	/**
+	 * TPWS 连接器。
+	 *
+	 * <p>两段式操作：先右键信号机、再右键 TPWS 线圈，把两者绑起来。
+	 * 之所以不复用 MTR 自己的信号连接器，见 {@link ItemTpwsLinker} 的类注释。
+	 */
+	public static final ItemRegistryObject TPWS_LINKER = MTRSignalDashboard.REGISTRY.registerItem(
+			MTRSignalDashboard.identifier("tpws_linker"),
+			itemSettings -> new Item(new ItemTpwsLinker(itemSettings.maxCount(1))),
+			org.mtr.mod.CreativeModeTabs.CORE
+	);
+
 	private Items() {
 	}
 
 	public static void init() {
 		// 触发类加载，完成静态字段中的注册（实际落库由 REGISTRY.init() 完成）
-		MTRSignalDashboard.LOGGER.info("Registered item: signal_dashboard");
+		MTRSignalDashboard.LOGGER.info("Registered items: signal_dashboard, tpws_linker");
 	}
 }

@@ -4,6 +4,7 @@
 	"package": "org.mtr.signaldashboard.mixin",
 	"compatibilityLevel": "JAVA_17",
 	"mixins": [
+		"NameColorDataBaseSchemaAccessor",
 		"VehicleSchemaAccessor",
 		"VehicleMixin"
 	],

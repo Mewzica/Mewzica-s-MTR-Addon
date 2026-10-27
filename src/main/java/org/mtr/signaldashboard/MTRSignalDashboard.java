@@ -5,8 +5,10 @@ import org.apache.logging.log4j.Logger;
 import org.mtr.mapping.holder.Identifier;
 import org.mtr.mapping.registry.Registry;
 import org.mtr.signaldashboard.packet.PacketOpenSignalDashboard;
+import org.mtr.signaldashboard.packet.PacketOpenTpwsConfig;
 import org.mtr.signaldashboard.packet.PacketRequestSignalBlocks;
 import org.mtr.signaldashboard.packet.PacketReverser;
+import org.mtr.signaldashboard.packet.PacketTpwsConfig;
 import org.mtr.signaldashboard.packet.PacketUpdateSignalLink;
 
 /**
@@ -66,12 +68,22 @@ public final class MTRSignalDashboard {
 		REGISTRY.registerPacket(PacketUpdateSignalLink.class, PacketUpdateSignalLink::new);
 		REGISTRY.registerPacket(PacketRequestSignalBlocks.class, PacketRequestSignalBlocks::new);
 		REGISTRY.registerPacket(PacketReverser.class, PacketReverser::new);
+		REGISTRY.registerPacket(PacketOpenTpwsConfig.class, PacketOpenTpwsConfig::new);
+		REGISTRY.registerPacket(PacketTpwsConfig.class, PacketTpwsConfig::new);
 
 		// 3. 注册物品（这一步只是把注册请求入队）
 		Items.init();
 
 		// 4. 注册方块（同样只是入队）
 		Blocks.init();
+
+		// 4.5 注册方块实体类型。★ 必须排在 Blocks.init() 之后 ——
+		//     registerBlockEntityType 会立即拿 Blocks.TPWS_GRID.get() 去建
+		//     BlockEntityType，方块对象得先存在（它确实在 Blocks 的静态字段里就 new 好了）。
+		BlockEntityTypes.init();
+
+		// 4.6 注册音效（TPWS 起动音 / 超速 / 闯红灯）
+		Sounds.init();
 
 		// 5. ★ 关键：flush 所有延迟注册。漏掉这一步物品就永远注册不上。
 		REGISTRY.init();

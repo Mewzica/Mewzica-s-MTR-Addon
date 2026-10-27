@@ -3,6 +3,16 @@
 	"itemGroup.mewsmtr.main": "MTR Signal Dashboard",
 
 	"block.mewsmtr.tpws_grid": "TPWS Grid",
+	"item.mewsmtr.tpws_linker": "TPWS Linker",
+
+	"subtitles.mewsmtr.tpws_start": "TPWS armed",
+	"subtitles.mewsmtr.tpws_overspeed": "TPWS overspeed alarm",
+	"subtitles.mewsmtr.tpws_spad": "TPWS SPAD alarm",
+
+	"message.mewsmtr.tpws.link.selected": "Signal selected at %s, %s, %s - right-click a TPWS grid to link",
+	"message.mewsmtr.tpws.link.not_signal": "Right-click an MTR signal first",
+	"message.mewsmtr.tpws.link.no_selection": "No signal selected - right-click a signal first",
+	"message.mewsmtr.tpws.link.done": "Linked to the signal at %s, %s, %s",
 
 	"category.mewsmtr.keybinding": "Mewzica's MTR Addon",
 	"key.mewsmtr.reverser_forward": "Reverser: Step toward Forward (Manual Driving)",
@@ -73,5 +83,28 @@
 	"gui.mewsmtr.status.sent_connect": "Connect request sent (%s)",
 	"gui.mewsmtr.status.sent_disconnect": "Disconnect request sent (%s)",
 	"gui.mewsmtr.status.terrain_on": "Terrain enabled",
-	"gui.mewsmtr.status.terrain_off": "Terrain disabled"
+	"gui.mewsmtr.status.terrain_off": "Terrain disabled",
+
+	"gui.mewsmtr.tpws.title": "TPWS Grid",
+	"gui.mewsmtr.tpws.coord": "at %s, %s, %s",
+	"gui.mewsmtr.tpws.mode": "Mode",
+	"gui.mewsmtr.tpws.mode.overspeed": "Overspeed",
+	"gui.mewsmtr.tpws.mode.signal": "Signal",
+	"gui.mewsmtr.tpws.threshold": "Threshold",
+	"gui.mewsmtr.tpws.threshold.fixed": "Fixed",
+	"gui.mewsmtr.tpws.threshold.line": "Line + margin",
+	"gui.mewsmtr.tpws.speed_limit": "Limit",
+	"gui.mewsmtr.tpws.margin": "Margin",
+	"gui.mewsmtr.tpws.signal": "Linked signal",
+	"gui.mewsmtr.tpws.signal.none": "Not linked",
+	"gui.mewsmtr.tpws.signal.linked": "Linked at %s, %s, %s",
+	"gui.mewsmtr.tpws.signal.color": "Colour #%s",
+	"gui.mewsmtr.tpws.auto_link": "Auto detect",
+	"gui.mewsmtr.tpws.unlink": "Unlink",
+	"gui.mewsmtr.tpws.done": "Done",
+	"gui.mewsmtr.tpws.cancel": "Cancel",
+	"gui.mewsmtr.tpws.hint.overspeed": "Trains passing over this grid above the threshold are braked to a stop.",
+	"gui.mewsmtr.tpws.hint.signal": "Trains passing over this grid while the linked signal is red are braked to a stop.",
+	"gui.mewsmtr.tpws.line_hint": "Threshold = rail speed limit + margin",
+	"gui.mewsmtr.tpws.unit.kmh": "km/h"
 }

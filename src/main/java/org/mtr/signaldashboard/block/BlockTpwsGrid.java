@@ -1,52 +1,69 @@
 package org.mtr.signaldashboard.block;
 
+import org.mtr.mapping.holder.ActionResult;
 import org.mtr.mapping.holder.Block;
+import org.mtr.mapping.holder.BlockEntity;
+import org.mtr.mapping.holder.BlockHitResult;
 import org.mtr.mapping.holder.BlockPos;
 import org.mtr.mapping.holder.BlockSettings;
 import org.mtr.mapping.holder.BlockState;
 import org.mtr.mapping.holder.BlockView;
 import org.mtr.mapping.holder.Direction;
+import org.mtr.mapping.holder.Hand;
+import org.mtr.mapping.holder.Item;
 import org.mtr.mapping.holder.ItemPlacementContext;
+import org.mtr.mapping.holder.ItemStack;
+import org.mtr.mapping.holder.PlayerEntity;
 import org.mtr.mapping.holder.Property;
 import org.mtr.mapping.holder.ShapeContext;
 import org.mtr.mapping.holder.VoxelShape;
+import org.mtr.mapping.holder.World;
+import org.mtr.mapping.mapper.BlockEntityExtension;
 import org.mtr.mapping.mapper.BlockExtension;
+import org.mtr.mapping.mapper.BlockWithEntity;
 import org.mtr.mapping.mapper.DirectionHelper;
 import org.mtr.mapping.tool.HolderBase;
+import org.mtr.mod.Init;
+import org.mtr.signaldashboard.data.TpwsCoilRegistry;
+import org.mtr.signaldashboard.packet.PacketOpenTpwsConfig;
 
 import java.util.List;
 
 /**
- * TPWS 感应网格方块：带水平朝向（{@code facing}）的薄片。
+ * TPWS 线圈（{@code mewsmtr:tpws_grid}）。
  *
- * <h2>朝向怎么做</h2>
- * MTR 的映射层把原版 {@code StateManager.Builder} 封掉了（{@code appendProperties} 是
- * {@code final}），加方块属性的唯一入口是 {@link DirectionHelper} 那套：
+ * <p>现实中它是铺在两根钢轨之间地面上的两道感应回路（Arming / Trigger）。
+ * 这里用一块 1 像素厚、带水平朝向的薄片表示，模型来自 Blockbench。
+ *
+ * <h2>交互</h2>
+ * <ul>
+ *     <li><b>手持 MTR 的刷子右键</b> → 打开配置界面（超速阈值 / 信号联锁）。
+ *         用刷子而不是空手，是为了不和「直接放方块 / 破坏方块」冲突，
+ *         而且刷子在 MTR 里本来就是「编辑已放置对象」的通用工具。</li>
+ *     <li><b>手持 TPWS 连接器右键</b> → 把之前选中的信号机绑到这枚线圈上，
+ *         见 {@code ItemTpwsLinker}。</li>
+ * </ul>
+ *
+ * <h2>为什么必须实现 {@link BlockWithEntity}</h2>
+ * 这个接口同时解决两件事：
  * <ol>
- *     <li>{@link #addBlockProperties(List)} 里把 {@link DirectionHelper#FACING} 加进属性表 ——
- *         这一步决定方块状态里<b>真的</b>有 {@code facing}；</li>
- *     <li>构造函数里用 {@link #withFacing} 设默认值，否则默认状态没有该属性，
- *         第一次放置就会抛 {@code IllegalArgumentException}；</li>
- *     <li>{@link #getPlacementState2} 里按玩家朝向取反，让正面朝着玩家。</li>
+ *     <li>提供 {@code createBlockEntity} 的桥接（MTR 的 {@code BlockAbstractMapping}
+ *         没有暴露 {@code Block#createBlockEntity}）；</li>
+ *     <li>提供一个默认的 {@code BlockEntityTicker}，让
+ *         {@link BlockEntityTpwsGrid#blockEntityTick()} 真的被调用 ——
+ *         我们靠它做「首次登记进全局索引」。少了它，方块实体永远收不到 tick。</li>
  * </ol>
  *
- * <h2>为什么要那个 unchecked 的 {@code withFacing}</h2>
- * {@link DirectionHelper#FACING} 是 {@code DirectionProperty}，而 {@code BlockState.with}
- * 只接受 {@code Property<T>}，两者在映射层里是两个类。MTR 自己的方块也是靠
- * {@code new Property<>(FACING.data)} 转的。另外泛型 {@code T} 是<b>原版</b>的
- * {@code net.minecraft.util.math.Direction}，不是映射层的 {@code holder.Direction}，
- * 所以值要取 {@code direction.data}——直接传 holder 枚举会在运行时校验失败。
+ * <h2>碰撞箱</h2>
+ * 和模型同尺寸（y 1.25~2.25）。注意 {@code Blocks} 里<b>不能</b>叠
+ * {@code noCollision()} —— 那会把 {@code collidable} 置 false，
+ * 下面重写的 {@code getCollisionShape2} 就失效了。
  *
  * @author Mewzica
  */
-public class BlockTpwsGrid extends BlockExtension implements DirectionHelper {
+public class BlockTpwsGrid extends BlockExtension implements DirectionHelper, BlockWithEntity {
 
-	/**
-	 * 碰撞箱 / 选取框：和模型完全一致的一块薄板。
-	 *
-	 * <p>模型（{@code models/block/tpws_grid.json}）占满整格 x/z，高度只从 1.25 到 2.25 像素，
-	 * 所以这里也用同样的六个坐标（单位是 1/16 格）。模型改了这里要跟着改。
-	 */
+	/** 和模型完全一致的薄板（模型 y 从 1.25 到 2.25）。 */
 	private static final VoxelShape SHAPE = Block.createCuboidShape(0.0D, 1.25D, 0.0D, 16.0D, 2.25D, 16.0D);
 
 	public BlockTpwsGrid(BlockSettings blockSettings) {
@@ -61,29 +78,94 @@ public class BlockTpwsGrid extends BlockExtension implements DirectionHelper {
 
 	@Override
 	public BlockState getPlacementState2(ItemPlacementContext itemPlacementContext) {
-		// 和原版箱子/熔炉一致：正面朝向玩家
 		return withFacing(getDefaultState2(), itemPlacementContext.getPlayerFacing().getOpposite());
 	}
 
-	/** 鼠标指向时的黑框：贴合薄板，而不是整格立方体。 */
 	@Override
 	public VoxelShape getOutlineShape2(BlockState blockState, BlockView blockView, BlockPos blockPos, ShapeContext shapeContext) {
 		return SHAPE;
 	}
 
-	/** 实际碰撞：同样是这块薄板，所以可以站在上面、但不会有一格高的空气墙。 */
 	@Override
 	public VoxelShape getCollisionShape2(BlockState blockState, BlockView blockView, BlockPos blockPos, ShapeContext shapeContext) {
 		return SHAPE;
 	}
 
+	@Override
+	public BlockEntityExtension createBlockEntity(BlockPos blockPos, BlockState blockState) {
+		return new BlockEntityTpwsGrid(blockPos, blockState);
+	}
+
+	// ------------------------------------------------------------------
+	// 交互
+	// ------------------------------------------------------------------
+
+	@Override
+	public ActionResult onUse2(BlockState blockState, World world, BlockPos blockPos, PlayerEntity playerEntity, Hand hand, BlockHitResult blockHitResult) {
+		if (!isBrush(playerEntity.getStackInHand(hand))) {
+			// 不是刷子：交给别的物品自己处理（比如连接器要在服务端绑定信号机）
+			return ActionResult.PASS;
+		}
+
+		if (!world.isClient()) {
+			final BlockEntityTpwsGrid coil = getCoil(world, blockPos);
+			if (coil != null) {
+				PacketOpenTpwsConfig.sendToPlayer(world, playerEntity, blockPos, coil.getConfig());
+			}
+		}
+		return ActionResult.SUCCESS;
+	}
+
+	// ------------------------------------------------------------------
+	// 生命周期
+	// ------------------------------------------------------------------
+
 	/**
-	 * 把 {@code facing} 写进方块状态。
+	 * 方块被替换 / 破坏时把索引记录摘掉。
 	 *
-	 * <p>泛型擦除后 {@code with} 的第二个参数退化成 {@code Comparable}，所以这里用原始类型
-	 * 绕开 {@code DirectionProperty} 与 {@code Property<T>} 之间的类型鸿沟 —— MTR 的
-	 * 映射层没有为这种情况提供公开的转换方法。
+	 * <p>这里<b>不</b>判断新旧状态是否同一个方块 —— 朝向变化也会走到这里，
+	 * 但那只会让索引少一条记录，下一个 tick 方块实体的
+	 * {@code blockEntityTick} 会立刻补回来。相比之下，「方块真被挖掉但记录还在」
+	 * 才是需要避免的情况（会对着空气刹车）。
 	 */
+	@Override
+	public void onStateReplaced2(BlockState blockState, World world, BlockPos blockPos, BlockState newState, boolean moved) {
+		if (!world.isClient()) {
+			final BlockEntityTpwsGrid coil = getCoil(world, blockPos);
+			if (coil != null) {
+				coil.unregisterFromIndex();
+			} else {
+				// 方块实体已经没了（比如被爆炸直接抹掉），只能按坐标兜底摘除
+				TpwsCoilRegistry.remove(Init.getWorldId(world), blockPos.asLong());
+			}
+		}
+		super.onStateReplaced2(blockState, world, blockPos, newState, moved);
+	}
+
+	// ------------------------------------------------------------------
+	// 工具
+	// ------------------------------------------------------------------
+
+	/** 取出方块实体；不是本模组的就返回 {@code null}。 */
+	private static BlockEntityTpwsGrid getCoil(World world, BlockPos blockPos) {
+		final BlockEntity blockEntity = world.getBlockEntity(blockPos);
+		return blockEntity != null && blockEntity.data instanceof BlockEntityTpwsGrid coil ? coil : null;
+	}
+
+	/**
+	 * 判断手上拿的是不是 MTR 的刷子。
+	 *
+	 * <p>用 {@code .data ==} 而不是 {@code equals}：{@code Item} 是映射层的包装对象，
+	 * 底层 {@code net.minecraft.item.Item} 才是注册表里的唯一实例，直接比底层对象最可靠。
+	 */
+	private static boolean isBrush(ItemStack itemStack) {
+		if (itemStack == null || itemStack.isEmpty()) {
+			return false;
+		}
+		final Item brush = org.mtr.mod.Items.BRUSH.get();
+		return brush != null && itemStack.getItem().data == brush.data;
+	}
+
 	@SuppressWarnings({"unchecked", "rawtypes"})
 	private static BlockState withFacing(BlockState blockState, Direction facing) {
 		return blockState.with((Property) new Property<>(DirectionHelper.FACING.data), facing.data);

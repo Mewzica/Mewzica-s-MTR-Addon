@@ -5,6 +5,7 @@ import org.mtr.libraries.it.unimi.dsi.fastutil.longs.Long2LongAVLTreeMap;
 import org.mtr.libraries.it.unimi.dsi.fastutil.objects.ObjectArrayList;
 import org.mtr.signaldashboard.MTRSignalDashboard;
 import org.mtr.signaldashboard.drive.ReverseDrive;
+import org.mtr.signaldashboard.tpws.TpwsProtection;
 import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
@@ -120,6 +121,21 @@ public class VehicleMixin {
 	/** 上一次打镜像日志的时间戳；客户端与服务端共用这一个节流。 */
 	@Unique
 	private static long mewsmtr$lastMirrorLogMillis;
+
+	/**
+	 * TPWS 防护检查。
+	 *
+	 * <p>放在 {@code simulate} 的 HEAD，<b>早于</b> MTR 自己的行驶计算 —— 这样
+	 * 被清零的速度会立刻参与本 tick 的位移计算，列车真正停住，而不是「这一 tick
+	 * 先冲过去、下一 tick 才被拽回来」。
+	 *
+	 * <p>服务端负责刹车（权威），客户端只播声音（见 {@code TpwsProtection} 的类注释）。
+	 */
+	@SuppressWarnings("rawtypes")
+	@Inject(method = "simulate", at = @At("HEAD"), remap = false)
+	private void mewsmtr$tpwsCheck(long millisElapsed, ObjectArrayList vehiclePositions, Long2LongAVLTreeMap vehicleTimesAlongRoute, CallbackInfo callbackInfo) {
+		TpwsProtection.tick((Vehicle) (Object) this, isClientside);
+	}
 
 	@SuppressWarnings("rawtypes")
 	@Inject(method = "simulate", at = @At("HEAD"), remap = false)

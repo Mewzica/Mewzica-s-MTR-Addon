@@ -3,7 +3,9 @@ package org.mtr.signaldashboard;
 import org.mtr.mapping.holder.BlockPos;
 import org.mtr.mapping.registry.RegistryClient;
 import org.mtr.signaldashboard.client.DriveInput;
+import org.mtr.signaldashboard.data.TpwsCoilConfig;
 import org.mtr.signaldashboard.packet.PacketOpenSignalDashboard;
+import org.mtr.signaldashboard.packet.PacketTpwsConfig;
 import org.mtr.signaldashboard.packet.PacketUpdateSignalLink;
 
 /**
@@ -56,5 +58,16 @@ public final class MTRSignalDashboardClient {
 	 */
 	public static void requestRefresh() {
 		REGISTRY_CLIENT.sendPacketToServer(new PacketOpenSignalDashboard());
+	}
+
+	/**
+	 * 提交 TPWS 线圈配置。
+	 *
+	 * @param action {@link PacketTpwsConfig#ACTION_SAVE} /
+	 *               {@link PacketTpwsConfig#ACTION_AUTO_LINK} /
+	 *               {@link PacketTpwsConfig#ACTION_UNLINK}
+	 */
+	public static void sendTpwsConfig(BlockPos blockPos, TpwsCoilConfig config, int action) {
+		REGISTRY_CLIENT.sendPacketToServer(new PacketTpwsConfig(blockPos, config, action));
 	}
 }
