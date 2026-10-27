@@ -66,10 +66,10 @@ public final class TpwsProtection {
 	/** 同一个音效两次播放的最小间隔（毫秒），防止帧率抖动时连着播两遍。 */
 	private static final long SOUND_COOLDOWN_MILLIS = 1500L;
 
-	/** 车辆当前所处的线圈（车辆 id → 线圈坐标编码）。用来识别「进入 / 离开」。 */
+	/** 车辆当前所处的线圈（状态键 → 线圈坐标编码）。用来识别「进入 / 离开」。 */
 	private static final Map<Long, Long> CURRENT_COIL = new ConcurrentHashMap<>();
 
-	/** 超速模式下一次制动保持到什么时候（车辆 id → 时间戳）。 */
+	/** 超速模式下一次制动保持到什么时候（状态键 → 时间戳）。 */
 	private static final Map<Long, Long> OVERSPEED_HOLD_UNTIL = new ConcurrentHashMap<>();
 
 	/** 每辆车上次播起动音 / 报警音的时间戳。 */
@@ -98,7 +98,7 @@ public final class TpwsProtection {
 	 * @param clientSide 是否是客户端副本。客户端<b>只播声音、不改速度</b>
 	 */
 	public static Outcome tick(Vehicle vehicle, boolean clientSide) {
-		final long vehicleId = vehicle.getId();
+		final long stateKey = stateKey(vehicle.getId(), clientSide);
 		final Vector head = vehicle.getHeadPosition();
 		if (head == null) {
 			return Outcome.NONE;
@@ -109,26 +109,26 @@ public final class TpwsProtection {
 
 		if (coil == null) {
 			// 离开所有线圈：清掉边沿状态，下次经过重新计
-			leaveCoil(vehicleId);
+			leaveCoil(stateKey);
 			return Outcome.NONE;
 		}
 
-		final boolean justEntered = !Long.valueOf(coil.blockPos()).equals(CURRENT_COIL.put(vehicleId, coil.blockPos()));
+		final boolean justEntered = !Long.valueOf(coil.blockPos()).equals(CURRENT_COIL.put(stateKey, coil.blockPos()));
 		final TpwsCoilConfig config = coil.config();
 
 		if (justEntered && clientSide) {
-			playSound(vehicleId, head, Sounds.TPWS_START, LAST_START_SOUND, 0.6F);
+			playSound(stateKey, head, Sounds.TPWS_START, LAST_START_SOUND, 0.6F);
 		}
 
 		final Outcome outcome = config.isSignalMode()
 				? evaluateSignal(vehicle, config)
-				: evaluateOverspeed(vehicle, config, head, justEntered);
+				: evaluateOverspeed(vehicle, config, head, justEntered, stateKey);
 
 		if (clientSide) {
 			if (outcome == Outcome.TRIPPED_OVERSPEED) {
-				playSound(vehicleId, head, Sounds.TPWS_OVERSPEED, LAST_ALARM_SOUND, 1.0F);
+				playSound(stateKey, head, Sounds.TPWS_OVERSPEED, LAST_ALARM_SOUND, 1.0F);
 			} else if (outcome == Outcome.TRIPPED_SPAD) {
-				playSound(vehicleId, head, Sounds.TPWS_SPAD, LAST_ALARM_SOUND, 1.0F);
+				playSound(stateKey, head, Sounds.TPWS_SPAD, LAST_ALARM_SOUND, 1.0F);
 			}
 			// 客户端只负责听个响；真正的刹车由服务端权威执行
 			return outcome;
@@ -141,11 +141,24 @@ public final class TpwsProtection {
 		return outcome;
 	}
 
+	/**
+	 * 状态表用的键。
+	 *
+	 * <p><b>必须把客户端/服务端区分开</b>：单人游戏里两边同进程，
+	 * 客户端那份 {@code Vehicle} 和服务端那份是<b>两个对象但 id 相同</b>
+	 * （id 来自存档数据）。如果共用一张表，客户端每帧的写入会把服务端刚记下的
+	 * 「刚进入线圈」边沿吃掉 —— 表现就是超速防护在单人游戏里时灵时不灵。
+	 *
+	 * <p>做法是把 id 左移一位、最低位放 client/server 标记。
+	 */
+	private static long stateKey(long vehicleId, boolean clientSide) {
+		return vehicleId << 1 | (clientSide ? 1L : 0L);
+	}
+
 	/** 超速模式：边沿触发 + 3 秒保持。 */
-	private static Outcome evaluateOverspeed(Vehicle vehicle, TpwsCoilConfig config, Vector head, boolean justEntered) {
-		final long vehicleId = vehicle.getId();
+	private static Outcome evaluateOverspeed(Vehicle vehicle, TpwsCoilConfig config, Vector head, boolean justEntered, long stateKey) {
 		final long now = System.currentTimeMillis();
-		final long holdUntil = OVERSPEED_HOLD_UNTIL.getOrDefault(vehicleId, 0L);
+		final long holdUntil = OVERSPEED_HOLD_UNTIL.getOrDefault(stateKey, 0L);
 
 		if (now < holdUntil) {
 			// 还在按住：继续刹
@@ -161,10 +174,10 @@ public final class TpwsProtection {
 		final double thresholdKmh = resolveThreshold(config, vehicle, head);
 
 		if (speedKmh > thresholdKmh) {
-			OVERSPEED_HOLD_UNTIL.put(vehicleId, now + OVERSPEED_HOLD_MILLIS);
+			OVERSPEED_HOLD_UNTIL.put(stateKey, now + OVERSPEED_HOLD_MILLIS);
 			MTRSignalDashboard.LOGGER.info(
 					"TPWS overspeed trip on vehicle {}: {} km/h > {} km/h",
-					Long.toHexString(vehicleId), Math.round(speedKmh), Math.round(thresholdKmh)
+					Long.toHexString(vehicle.getId()), Math.round(speedKmh), Math.round(thresholdKmh)
 			);
 			return Outcome.TRIPPED_OVERSPEED;
 		}
@@ -310,9 +323,9 @@ public final class TpwsProtection {
 		return data instanceof Simulator simulator ? simulator.dimension : "";
 	}
 
-	private static void leaveCoil(long vehicleId) {
-		if (CURRENT_COIL.remove(vehicleId) != null) {
-			OVERSPEED_HOLD_UNTIL.remove(vehicleId);
+	private static void leaveCoil(long stateKey) {
+		if (CURRENT_COIL.remove(stateKey) != null) {
+			OVERSPEED_HOLD_UNTIL.remove(stateKey);
 		}
 	}
 
@@ -327,12 +340,12 @@ public final class TpwsProtection {
 	 * 专用服务器上没有，一旦解析到就会 {@code NoClassDefFoundError}。
 	 * 所以调用点全部套在 {@code if (clientSide)} 里。
 	 */
-	private static void playSound(long vehicleId, Vector head, SoundEventRegistryObject sound, Map<Long, Long> cooldownMap, float volume) {
+	private static void playSound(long stateKey, Vector head, SoundEventRegistryObject sound, Map<Long, Long> cooldownMap, float volume) {
 		final long now = System.currentTimeMillis();
-		if (now - cooldownMap.getOrDefault(vehicleId, 0L) < SOUND_COOLDOWN_MILLIS) {
+		if (now - cooldownMap.getOrDefault(stateKey, 0L) < SOUND_COOLDOWN_MILLIS) {
 			return;
 		}
-		cooldownMap.put(vehicleId, now);
+		cooldownMap.put(stateKey, now);
 
 		final MinecraftClient client = MinecraftClient.getInstance();
 		if (client == null) {
