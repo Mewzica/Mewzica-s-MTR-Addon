@@ -95,6 +95,19 @@ public final class TpwsCoilConfig {
 	private static final String KEY_SIGNAL_POS = "SignalPos";
 	private static final String KEY_SIGNAL_COLOR = "SignalColor";
 	private static final String KEY_DIRECTION = "Direction";
+	private static final String KEY_ENABLED = "Enabled";
+
+	/**
+	 * 是否启用。
+	 *
+	 * <p>{@code tpws_grid} 方块放下即生效，所以默认 {@code true}；
+	 * 轨道节点（{@code mtr:rail}）本身是 MTR 的方块，默认不该带 TPWS 行为，
+	 * 由方块实体在构造时置 {@code false}，玩家用刷子显式打开。
+	 *
+	 * <p>关闭时不会进 {@link TpwsCoilRegistry}，也就是既不拦车、
+	 * 也不会接管信号机显示 —— 等于这块地儿没装 TPWS。
+	 */
+	private volatile boolean enabled = true;
 
 	private volatile int mode;
 	private volatile int speedMode;
@@ -137,12 +150,26 @@ public final class TpwsCoilConfig {
 
 	/** 深拷贝 —— 发给客户端编辑的那一份必须是副本，否则玩家点「取消」也会改到服务端数据。 */
 	public TpwsCoilConfig copy() {
-		return new TpwsCoilConfig(mode, speedMode, speedLimitKmh, marginKmh, signalPos, signalColor, direction);
+		final TpwsCoilConfig copy = new TpwsCoilConfig(mode, speedMode, speedLimitKmh, marginKmh, signalPos, signalColor, direction);
+		copy.enabled = enabled;
+		return copy;
 	}
 
 	// ------------------------------------------------------------------
 	// 访问器
 	// ------------------------------------------------------------------
+
+	public boolean isEnabled() {
+		return enabled;
+	}
+
+	public void setEnabled(boolean enabled) {
+		this.enabled = enabled;
+	}
+
+	public void toggleEnabled() {
+		this.enabled = !enabled;
+	}
 
 	public int getMode() {
 		return mode;
@@ -248,6 +275,7 @@ public final class TpwsCoilConfig {
 
 	/** 写入方块实体 NBT。键名带模组前缀由调用方负责（方块实体的 tag 本来就是私有的）。 */
 	public void writeCompoundTag(CompoundTag tag) {
+		tag.putBoolean(KEY_ENABLED, enabled);
 		tag.putInt(KEY_MODE, mode);
 		tag.putInt(KEY_SPEED_MODE, speedMode);
 		tag.putInt(KEY_SPEED_LIMIT, speedLimitKmh);
@@ -259,6 +287,9 @@ public final class TpwsCoilConfig {
 
 	/** 从方块实体 NBT 读取。缺字段时保留当前值，兼容旧存档。 */
 	public void readCompoundTag(CompoundTag tag) {
+		if (tag.contains(KEY_ENABLED)) {
+			enabled = tag.getBoolean(KEY_ENABLED);
+		}
 		if (tag.contains(KEY_MODE)) {
 			setMode(tag.getInt(KEY_MODE));
 		}
@@ -283,6 +314,7 @@ public final class TpwsCoilConfig {
 	}
 
 	public void write(PacketBufferSender sender) {
+		sender.writeBoolean(enabled);
 		sender.writeInt(mode);
 		sender.writeInt(speedMode);
 		sender.writeInt(speedLimitKmh);
@@ -293,7 +325,8 @@ public final class TpwsCoilConfig {
 	}
 
 	public static TpwsCoilConfig read(PacketBufferReceiver receiver) {
-		return new TpwsCoilConfig(
+		final boolean enabled = receiver.readBoolean();
+		final TpwsCoilConfig config = new TpwsCoilConfig(
 				receiver.readInt(),
 				receiver.readInt(),
 				receiver.readInt(),
@@ -302,6 +335,8 @@ public final class TpwsCoilConfig {
 				receiver.readInt(),
 				receiver.readInt()
 		);
+		config.enabled = enabled;
+		return config;
 	}
 
 	private static int clamp(int value, int min, int max) {
@@ -310,7 +345,8 @@ public final class TpwsCoilConfig {
 
 	@Override
 	public String toString() {
-		return "TpwsCoilConfig{mode=" + mode
+		return "TpwsCoilConfig{enabled=" + enabled
+				+ ", mode=" + mode
 				+ ", speedMode=" + speedMode
 				+ ", speedLimit=" + speedLimitKmh
 				+ ", margin=" + marginKmh

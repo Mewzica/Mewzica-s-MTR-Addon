@@ -9,6 +9,7 @@ import org.mtr.signaldashboard.packet.PacketOpenTpwsConfig;
 import org.mtr.signaldashboard.packet.PacketRequestSignalBlocks;
 import org.mtr.signaldashboard.packet.PacketReverser;
 import org.mtr.signaldashboard.packet.PacketTpwsConfig;
+import org.mtr.signaldashboard.packet.PacketTpwsSync;
 import org.mtr.signaldashboard.packet.PacketUpdateSignalLink;
 
 /**
@@ -70,6 +71,7 @@ public final class MTRSignalDashboard {
 		REGISTRY.registerPacket(PacketReverser.class, PacketReverser::new);
 		REGISTRY.registerPacket(PacketOpenTpwsConfig.class, PacketOpenTpwsConfig::new);
 		REGISTRY.registerPacket(PacketTpwsConfig.class, PacketTpwsConfig::new);
+		REGISTRY.registerPacket(PacketTpwsSync.class, PacketTpwsSync::new);
 
 		// 3. 注册物品（这一步只是把注册请求入队）
 		Items.init();

@@ -54,7 +54,7 @@ public class TpwsConfigScreen extends ScreenExtension implements IGui {
 	/** 面板宽度：和原版箱子界面一致。 */
 	private static final int PANEL_WIDTH = 176;
 
-	private static final int PANEL_HEIGHT = 206;
+	private static final int PANEL_HEIGHT = 226;
 
 	/** 原版按钮的标准高度。 */
 	private static final int BUTTON_HEIGHT = 20;
@@ -174,12 +174,20 @@ public class TpwsConfigScreen extends ScreenExtension implements IGui {
 					refreshSlots();
 				});
 
+		// ---- 启用开关（两种载体共用：线圈方块放下即启用，轨道节点默认关闭）----
+		addButton(px + 28, py + 176, 120,
+				() -> Lang.gui("tpws.enabled") + ": " + Lang.gui(config.isEnabled() ? "tpws.state.on" : "tpws.state.off"),
+				() -> true, () -> {
+					config.toggleEnabled();
+					refreshSlots();
+				});
+
 		// ---- 底部 ----
-		addButton(px + 29, py + 176, 56, () -> Lang.gui("tpws.done"), () -> true, () -> {
+		addButton(px + 29, py + 200, 56, () -> Lang.gui("tpws.done"), () -> true, () -> {
 			sendToServer(PacketTpwsConfig.ACTION_SAVE);
 			onClose2();
 		});
-		addButton(px + 91, py + 176, 56, () -> Lang.gui("tpws.cancel"), () -> true, this::onClose2);
+		addButton(px + 91, py + 200, 56, () -> Lang.gui("tpws.cancel"), () -> true, this::onClose2);
 
 		refreshSlots();
 	}
@@ -317,10 +325,18 @@ public class TpwsConfigScreen extends ScreenExtension implements IGui {
 
 		label(graphicsHolder, Lang.gui("tpws.direction"), px + LABEL_X, py + 140, ARGB_TEXT);
 
-		graphicsHolder.drawCenteredText(
-				Lang.gui(config.isSignalMode() ? "tpws.hint.signal" : "tpws.hint.overspeed"),
-				px + PANEL_WIDTH / 2, py + 158, ARGB_DIM
-		);
+		if (!config.isEnabled()) {
+			// 停用时把提示换成警告色 —— 参数区照样能调，但不生效这件事必须显眼
+			graphicsHolder.drawCenteredText(
+					Lang.gui("tpws.hint.disabled"),
+					px + PANEL_WIDTH / 2, py + 158, ARGB_WARN
+			);
+		} else {
+			graphicsHolder.drawCenteredText(
+					Lang.gui(config.isSignalMode() ? "tpws.hint.signal" : "tpws.hint.overspeed"),
+					px + PANEL_WIDTH / 2, py + 158, ARGB_DIM
+			);
+		}
 
 		// 原版按钮由 Screen 的 children 机制绘制，必须放在面板之后
 		super.render(graphicsHolder, mouseX, mouseY, delta);

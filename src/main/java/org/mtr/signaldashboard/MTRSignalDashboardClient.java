@@ -1,8 +1,12 @@
 package org.mtr.signaldashboard;
 
+import net.fabricmc.fabric.api.client.rendering.v1.BlockEntityRendererRegistry;
+import net.minecraft.block.entity.BlockEntityType;
 import org.mtr.mapping.holder.BlockPos;
 import org.mtr.mapping.registry.RegistryClient;
+import org.mtr.signaldashboard.block.BlockEntityRailNode;
 import org.mtr.signaldashboard.client.DriveInput;
+import org.mtr.signaldashboard.client.RailNodeTpwsRenderer;
 import org.mtr.signaldashboard.data.TpwsCoilConfig;
 import org.mtr.signaldashboard.packet.PacketOpenSignalDashboard;
 import org.mtr.signaldashboard.packet.PacketTpwsConfig;
@@ -43,7 +47,23 @@ public final class MTRSignalDashboardClient {
 		// flush 客户端延迟注册
 		REGISTRY_CLIENT.init();
 
+		registerBlockEntityRenderers();
+
 		MTRSignalDashboard.LOGGER.info("Mewzica's MTR Addon client ready");
+	}
+
+	/**
+	 * 注册方块实体渲染器。
+	 *
+	 * <p>只为了轨道节点上的 TPWS 叠加模型（见 {@link RailNodeTpwsRenderer}）。
+	 * {@code tpws_grid} 自己是普通方块，走 blockstate 模型，不需要渲染器。
+	 *
+	 * <p>必须在客户端初始化阶段完成：原版在资源重载时才把工厂表
+	 * （{@code BlockEntityRendererFactories}）实例化成渲染器，注册晚了这一轮就赶不上。
+	 */
+	private static void registerBlockEntityRenderers() {
+		final BlockEntityType<BlockEntityRailNode> railNodeType = BlockEntityTypes.RAIL_NODE.get().data;
+		BlockEntityRendererRegistry.register(railNodeType, context -> new RailNodeTpwsRenderer());
 	}
 
 	/**

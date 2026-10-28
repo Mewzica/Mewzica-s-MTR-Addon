@@ -9,8 +9,8 @@ import org.mtr.mapping.registry.PacketHandler;
 import org.mtr.mapping.tool.PacketBufferReceiver;
 import org.mtr.mapping.tool.PacketBufferSender;
 import org.mtr.signaldashboard.MTRSignalDashboard;
-import org.mtr.signaldashboard.block.BlockEntityTpwsGrid;
 import org.mtr.signaldashboard.data.TpwsCoilConfig;
+import org.mtr.signaldashboard.data.TpwsCoilHolder;
 import org.mtr.signaldashboard.tpws.TpwsSignalFinder;
 
 /**
@@ -90,7 +90,7 @@ public class PacketTpwsConfig extends PacketHandler {
 		}
 
 		final BlockEntity blockEntity = world.getBlockEntity(blockPos);
-		if (blockEntity == null || !(blockEntity.data instanceof BlockEntityTpwsGrid coil)) {
+		if (blockEntity == null || !(blockEntity.data instanceof TpwsCoilHolder coil)) {
 			return;
 		}
 
@@ -115,6 +115,10 @@ public class PacketTpwsConfig extends PacketHandler {
 		}
 
 		coil.applyConfig(config);
+
+		// 附近客户端的本地投影也要跟着变：轨道节点的线圈模型、信号机接管
+		// 全都看客户端那份配置（方块实体没有原版同步，见 PacketTpwsSync 的说明）
+		PacketTpwsSync.broadcast(world, blockPos, coil.getConfig());
 
 		// 回发真实状态，界面据此刷新（尤其是自动检测的结果）
 		PacketOpenTpwsConfig.sendToServerPlayer(serverPlayerEntity, blockPos, coil.getConfig());

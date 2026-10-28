@@ -12,8 +12,9 @@ import org.mtr.mapping.mapper.ItemExtension;
 import org.mtr.mapping.mapper.TextHelper;
 import org.mtr.mod.block.BlockSignalBase;
 import org.mtr.signaldashboard.MTRSignalDashboard;
-import org.mtr.signaldashboard.block.BlockEntityTpwsGrid;
 import org.mtr.signaldashboard.data.TpwsCoilConfig;
+import org.mtr.signaldashboard.data.TpwsCoilHolder;
+import org.mtr.signaldashboard.packet.PacketTpwsSync;
 
 import java.util.Map;
 import java.util.UUID;
@@ -63,7 +64,7 @@ public class ItemTpwsLinker extends ItemExtension {
 		final BlockPos clickedPos = context.getBlockPos();
 		final BlockEntity blockEntity = world.getBlockEntity(clickedPos);
 
-		if (blockEntity != null && blockEntity.data instanceof BlockEntityTpwsGrid coil) {
+		if (blockEntity != null && blockEntity.data instanceof TpwsCoilHolder coil) {
 			return bindSignal(playerEntity, coil, clickedPos);
 		}
 
@@ -88,7 +89,7 @@ public class ItemTpwsLinker extends ItemExtension {
 	}
 
 	/** 把已选中的信号机绑到这枚线圈上。 */
-	private static ActionResult bindSignal(PlayerEntity playerEntity, BlockEntityTpwsGrid coil, BlockPos coilPos) {
+	private static ActionResult bindSignal(PlayerEntity playerEntity, TpwsCoilHolder coil, BlockPos coilPos) {
 		final Long pending = PENDING_SIGNAL.remove(playerEntity.getUuid());
 		if (pending == null) {
 			playerEntity.sendMessage(
@@ -99,9 +100,12 @@ public class ItemTpwsLinker extends ItemExtension {
 		}
 
 		final TpwsCoilConfig config = coil.getConfig();
+		// 轨道节点默认是停用的，绑定信号机就说明「这里要装 TPWS」，顺手打开
+		config.setEnabled(true);
 		config.setMode(TpwsCoilConfig.MODE_SIGNAL);
 		config.setSignal(pending, readSignalColor(playerEntity.getEntityWorld(), pending));
 		coil.markConfigChanged();
+		PacketTpwsSync.broadcast(playerEntity.getEntityWorld(), coilPos, config);
 
 		final BlockPos signalPos = BlockPos.fromLong(pending);
 		MTRSignalDashboard.LOGGER.info(

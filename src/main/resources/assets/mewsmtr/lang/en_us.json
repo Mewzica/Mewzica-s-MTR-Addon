@@ -113,5 +113,11 @@
 	"gui.mewsmtr.tpws.direction.north": "North",
 	"gui.mewsmtr.tpws.direction.east": "East",
 	"gui.mewsmtr.tpws.direction.south": "South",
-	"gui.mewsmtr.tpws.direction.west": "West"
+	"gui.mewsmtr.tpws.direction.west": "West",
+	"gui.mewsmtr.tpws.enabled": "TPWS",
+	"gui.mewsmtr.tpws.state.on": "On",
+	"gui.mewsmtr.tpws.state.off": "Off",
+	"gui.mewsmtr.tpws.hint.disabled": "Disabled - this coil does nothing.",
+	"gui.mewsmtr.tpws.rail_node.enabled": "TPWS fitted to this rail node",
+	"gui.mewsmtr.tpws.rail_node.disabled": "No TPWS on this rail node"
 }

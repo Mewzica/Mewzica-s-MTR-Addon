@@ -9,6 +9,7 @@ import org.mtr.mod.Init;
 import org.mtr.signaldashboard.BlockEntityTypes;
 import org.mtr.signaldashboard.MTRSignalDashboard;
 import org.mtr.signaldashboard.data.TpwsCoilConfig;
+import org.mtr.signaldashboard.data.TpwsCoilHolder;
 import org.mtr.signaldashboard.data.TpwsCoilRegistry;
 
 /**
@@ -28,7 +29,7 @@ import org.mtr.signaldashboard.data.TpwsCoilRegistry;
  *
  * @author Mewzica
  */
-public class BlockEntityTpwsGrid extends BlockEntityExtension {
+public class BlockEntityTpwsGrid extends BlockEntityExtension implements TpwsCoilHolder {
 
 	/** 本线圈的配置。索引里存的就是<b>同一个对象</b>，所以 GUI 改完立刻对模拟线程可见。 */
 	private final TpwsCoilConfig config = new TpwsCoilConfig();
@@ -41,6 +42,7 @@ public class BlockEntityTpwsGrid extends BlockEntityExtension {
 	}
 
 	/** 供 GUI / 数据包读写。 */
+	@Override
 	public TpwsCoilConfig getConfig() {
 		return config;
 	}
@@ -51,7 +53,9 @@ public class BlockEntityTpwsGrid extends BlockEntityExtension {
 	 * <p>这里<b>不</b>换对象引用，而是逐字段拷贝：索引里持有的是 {@link #config} 这个实例，
 	 * 换引用会让索引指向旧对象，刹车逻辑就再也看不到新配置了。
 	 */
+	@Override
 	public void applyConfig(TpwsCoilConfig source) {
+		config.setEnabled(source.isEnabled());
 		config.setMode(source.getMode());
 		config.setSpeedMode(source.getSpeedMode());
 		config.setSpeedLimitKmh(source.getSpeedLimitKmh());
@@ -71,6 +75,7 @@ public class BlockEntityTpwsGrid extends BlockEntityExtension {
 	 * <p>「就地改动」指的是直接拿 {@link #getConfig()} 改字段（比如 TPWS 连接器
 	 * 绑信号机），没有经过 {@link #applyConfig} 的整份覆盖路径。
 	 */
+	@Override
 	public void markConfigChanged() {
 		markDirty2();
 		registerToIndex();

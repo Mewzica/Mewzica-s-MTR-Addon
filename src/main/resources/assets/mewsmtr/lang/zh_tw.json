@@ -113,5 +113,11 @@
 	"gui.mewsmtr.tpws.direction.north": "北",
 	"gui.mewsmtr.tpws.direction.east": "東",
 	"gui.mewsmtr.tpws.direction.south": "南",
-	"gui.mewsmtr.tpws.direction.west": "西"
+	"gui.mewsmtr.tpws.direction.west": "西",
+	"gui.mewsmtr.tpws.enabled": "啟用 TPWS",
+	"gui.mewsmtr.tpws.state.on": "開",
+	"gui.mewsmtr.tpws.state.off": "關",
+	"gui.mewsmtr.tpws.hint.disabled": "已停用 —— 這枚線圈不參與任何防護。",
+	"gui.mewsmtr.tpws.rail_node.enabled": "此軌道節點已裝設 TPWS",
+	"gui.mewsmtr.tpws.rail_node.disabled": "此軌道節點未裝設 TPWS"
 }

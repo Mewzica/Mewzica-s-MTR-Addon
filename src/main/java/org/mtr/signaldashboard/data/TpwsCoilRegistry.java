@@ -67,18 +67,27 @@ public final class TpwsCoilRegistry {
 		return index >= 0 ? dimension.substring(index + 1) : dimension;
 	}
 
-	/** 登记（或覆盖）一枚线圈。重复调用是幂等的。 */
+	/**
+	 * 登记（或覆盖）一枚线圈。重复调用是幂等的。
+	 *
+	 * <p><b>停用的线圈会被直接摘掉</b>，而不是带着一个「enabled=false」的标志留在表里：
+	 * 刹车判定和信号接管都要遍历这张表，把「不生效」的对象留在里面等于让每个热路径
+	 * 都多判一次。这里集中处理，调用方（方块实体）不用各自记得。
+	 */
 	public static void put(String dimension, long blockPos, TpwsCoilConfig config) {
+		if (config == null || !config.isEnabled()) {
+			remove(dimension, blockPos);
+			return;
+		}
 		BY_DIMENSION.computeIfAbsent(canonicalDimension(dimension), key -> new ConcurrentHashMap<>())
 				.put(blockPos, new Coil(blockPos, config));
 		bySignalCache = null;
 	}
 
-	/** 注销一枚线圈。 */
+	/** 注销一枚线圈。没有这条记录时什么也不做（不会白白打掉信号反查缓存）。 */
 	public static void remove(String dimension, long blockPos) {
 		final Map<Long, Coil> coils = BY_DIMENSION.get(canonicalDimension(dimension));
-		if (coils != null) {
-			coils.remove(blockPos);
+		if (coils != null && coils.remove(blockPos) != null) {
 			bySignalCache = null;
 		}
 	}
